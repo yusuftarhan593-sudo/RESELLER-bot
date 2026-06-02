@@ -48,10 +48,10 @@ class CustomPrice(StatesGroup):
 @router.message(Command("admin"))
 async def admin_panel(message: Message):
     if not is_admin(message.from_user.id):
-        await message.answer("❌ Yetkisiz erişim!")
+        await message.answer("Yetkisiz erisim!")
         return
     await message.answer(
-        "👑 *Admin Paneli*\nNe yapmak istersiniz?",
+        "Admin Paneli\nNe yapmak istersiniz?",
         reply_markup=kb.admin_inline_menu(),
         parse_mode="Markdown"
     )
@@ -60,18 +60,18 @@ async def admin_panel(message: Message):
 async def cb_add_category(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
         return
-    await callback.message.answer("Kategori adını girin:", reply_markup=kb.cancel_keyboard())
+    await callback.message.answer("Kategori adini girin:", reply_markup=kb.cancel_keyboard())
     await state.set_state(AddCategory.name)
     await callback.answer()
 
 @router.message(AddCategory.name)
 async def add_category_name(message: Message, state: FSMContext):
-    if message.text == "❌ Cancel":
+    if message.text == "Cancel":
         await state.clear()
-        await message.answer("İptal edildi.")
+        await message.answer("Iptal edildi.")
         return
     await state.update_data(name=message.text)
-    await message.answer("Emoji girin (opsiyonel, - yazın atlamak için):")
+    await message.answer("Emoji girin (opsiyonel, - yazin atlamak icin):")
     await state.set_state(AddCategory.emoji)
 
 @router.message(AddCategory.emoji)
@@ -79,7 +79,7 @@ async def add_category_emoji(message: Message, state: FSMContext):
     data = await state.get_data()
     emoji = message.text if message.text != "-" else ""
     db.add_category(data["name"], emoji)
-    await message.answer(f"✅ Kategori eklendi: {data['name']}")
+    await message.answer("Kategori eklendi: " + data["name"])
     await state.clear()
 
 @router.callback_query(F.data == "admin_add_product")
@@ -88,54 +88,54 @@ async def cb_add_product(callback: CallbackQuery, state: FSMContext):
         return
     categories = db.get_categories()
     if not categories:
-        await callback.message.answer("❌ Önce kategori ekleyin!")
+        await callback.message.answer("Once kategori ekleyin!")
         await callback.answer()
         return
-    text = "Kategori ID seçin:\n\n"
+    text = "Kategori ID secin:\n\n"
     for cat in categories:
-        text += f"{cat[0]} - {cat[2]} {cat[1]}\n"
+        text += str(cat[0]) + " - " + str(cat[2]) + " " + str(cat[1]) + "\n"
     await callback.message.answer(text, reply_markup=kb.cancel_keyboard())
     await state.set_state(AddProduct.category_id)
     await callback.answer()
 
 @router.message(AddProduct.category_id)
 async def add_product_cat(message: Message, state: FSMContext):
-    if message.text == "❌ Cancel":
+    if message.text == "Cancel":
         await state.clear()
-        await message.answer("İptal edildi.")
+        await message.answer("Iptal edildi.")
         return
     await state.update_data(category_id=message.text)
-    await message.answer("Ürün adını girin:")
+    await message.answer("Urun adini girin:")
     await state.set_state(AddProduct.name)
 
 @router.message(AddProduct.name)
 async def add_product_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
-    await message.answer("Açıklama girin:")
+    await message.answer("Aciklama girin:")
     await state.set_state(AddProduct.description)
 
 @router.message(AddProduct.description)
 async def add_product_desc(message: Message, state: FSMContext):
     await state.update_data(description=message.text)
-    await message.answer("Günlük fiyat girin (örn: 1.50):")
+    await message.answer("Gunluk fiyat girin (ornek: 1.50):")
     await state.set_state(AddProduct.price_daily)
 
 @router.message(AddProduct.price_daily)
 async def add_product_price_daily(message: Message, state: FSMContext):
     await state.update_data(price_daily=message.text)
-    await message.answer("Haftalık fiyat girin (örn: 8.00):")
+    await message.answer("Haftalik fiyat girin (ornek: 8.00):")
     await state.set_state(AddProduct.price_weekly)
 
 @router.message(AddProduct.price_weekly)
 async def add_product_price_weekly(message: Message, state: FSMContext):
     await state.update_data(price_weekly=message.text)
-    await message.answer("Aylık fiyat girin (örn: 16.00):")
+    await message.answer("Aylik fiyat girin (ornek: 16.00):")
     await state.set_state(AddProduct.price_monthly)
 
 @router.message(AddProduct.price_monthly)
 async def add_product_price_monthly(message: Message, state: FSMContext):
     await state.update_data(price_monthly=message.text)
-    await message.answer("Maliyet fiyatı girin (örn: 0.80):")
+    await message.answer("Maliyet fiyati girin (ornek: 0.80):")
     await state.set_state(AddProduct.cost_price)
 
 @router.message(AddProduct.cost_price)
@@ -146,7 +146,7 @@ async def add_product_cost(message: Message, state: FSMContext):
         float(data["price_daily"]), float(data["price_weekly"]),
         float(data["price_monthly"]), float(message.text)
     )
-    await message.answer(f"✅ Ürün eklendi: {data['name']}")
+    await message.answer("Urun eklendi: " + data["name"])
     await state.clear()
 
 @router.callback_query(F.data == "admin_add_stock")
@@ -155,24 +155,24 @@ async def cb_add_stock(callback: CallbackQuery, state: FSMContext):
         return
     products = db.get_products()
     if not products:
-        await callback.message.answer("❌ Önce ürün ekleyin!")
+        await callback.message.answer("Once urun ekleyin!")
         await callback.answer()
         return
-    text = "Ürün ID seçin:\n\n"
+    text = "Urun ID secin:\n\n"
     for p in products:
-        text += f"{p[0]} - {p[2]}\n"
+        text += str(p[0]) + " - " + str(p[2]) + "\n"
     await callback.message.answer(text, reply_markup=kb.cancel_keyboard())
     await state.set_state(AddStock.product_id)
     await callback.answer()
 
 @router.message(AddStock.product_id)
 async def add_stock_product(message: Message, state: FSMContext):
-    if message.text == "❌ Cancel":
+    if message.text == "Cancel":
         await state.clear()
-        await message.answer("İptal edildi.")
+        await message.answer("Iptal edildi.")
         return
     await state.update_data(product_id=message.text)
-    await message.answer("Key/kodları girin (her satıra bir tane):")
+    await message.answer("Key/kodlari girin (her satira bir tane):")
     await state.set_state(AddStock.keys)
 
 @router.message(AddStock.keys)
@@ -181,21 +181,20 @@ async def add_stock_keys(message: Message, state: FSMContext):
     keys = message.text.strip().split("\n")
     for key in keys:
         db.add_stock(int(data["product_id"]), key.strip())
-    await message.answer(f"✅ {len(keys)} adet stok eklendi!")
+    await message.answer(str(len(keys)) + " adet stok eklendi!")
     await state.clear()
 
-# Bakiye Ekle - önce kullanıcı listesi göster
 @router.callback_query(F.data == "admin_add_balance")
 async def cb_add_balance(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
         return
     users = db.get_all_users()
     if not users:
-        await callback.message.answer("❌ Hiç kullanıcı yok.")
+        await callback.message.answer("Hic kullanici yok.")
         await callback.answer()
         return
     await callback.message.answer(
-        "👥 Bakiye eklenecek kullanıcıyı seçin:",
+        "Bakiye eklenecek kullaniciy seçin:",
         reply_markup=kb.users_list_keyboard(users, "bal")
     )
     await callback.answer()
@@ -206,38 +205,37 @@ async def bal_add_select(callback: CallbackQuery, state: FSMContext):
         return
     user_id = int(callback.data.split("_")[2])
     await state.update_data(user_id=user_id)
-    await callback.message.answer("Miktar girin (örn: 50):", reply_markup=kb.cancel_keyboard())
+    await callback.message.answer("Miktar girin (ornek: 50):", reply_markup=kb.cancel_keyboard())
     await state.set_state(AddBalance.amount)
     await callback.answer()
 
 @router.message(AddBalance.amount)
 async def add_balance_amount(message: Message, state: FSMContext):
-    if message.text == "❌ Cancel":
+    if message.text == "Cancel":
         await state.clear()
-        await message.answer("İptal edildi.")
+        await message.answer("Iptal edildi.")
         return
     data = await state.get_data()
     db.add_balance(int(data["user_id"]), float(message.text), message.from_user.id)
-    await message.answer(f"✅ ${message.text} eklendi!")
+    await message.answer("$" + message.text + " eklendi!")
     await state.clear()
 
-# Kullanıcı Ekle
 @router.callback_query(F.data == "admin_add_user")
 async def cb_add_user(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
         return
-    await callback.message.answer("Yeni kullanıcı adını girin:", reply_markup=kb.cancel_keyboard())
+    await callback.message.answer("Yeni kullanici adini girin:", reply_markup=kb.cancel_keyboard())
     await state.set_state(AddUser.username)
     await callback.answer()
 
 @router.message(AddUser.username)
 async def add_user_username(message: Message, state: FSMContext):
-    if message.text == "❌ Cancel":
+    if message.text == "Cancel":
         await state.clear()
-        await message.answer("İptal edildi.")
+        await message.answer("Iptal edildi.")
         return
     await state.update_data(username=message.text)
-    await message.answer("Şifre girin:")
+    await message.answer("Sifre girin:")
     await state.set_state(AddUser.password)
 
 @router.message(AddUser.password)
@@ -246,28 +244,24 @@ async def add_user_password(message: Message, state: FSMContext):
     success = db.add_user_by_admin(data["username"], message.text)
     if success:
         await message.answer(
-            f"✅ Kullanıcı oluşturuldu!\n\n"
-            f"👤 Kullanıcı adı: {data['username']}\n"
-            f"🔒 Şifre: {message.text}"
+            "Kullanici olusturuldu!\n\nKullanici adi: " + data["username"] + "\nSifre: " + message.text
         )
     else:
-        await message.answer("❌ Bu kullanıcı adı zaten var!")
+        await message.answer("Bu kullanici adi zaten var!")
     await state.clear()
 
-# Kullanıcılar listesi
 @router.callback_query(F.data == "admin_search_user")
 async def cb_search_user(callback: CallbackQuery):
     if not is_admin(callback.from_user.id):
         return
     users = db.get_all_users()
     if not users:
-        await callback.message.answer("❌ Hiç kullanıcı yok.")
+        await callback.message.answer("Hic kullanici yok.")
         await callback.answer()
         return
     await callback.message.answer(
-        "👥 *Tüm Kullanıcılar*\nBir kullanıcı seçin:",
-        reply_markup=kb.users_list_keyboard(users, "detail"),
-        parse_mode="Markdown"
+        "Tum Kullanicilar - Bir kullanici secin:",
+        reply_markup=kb.users_list_keyboard(users, "detail")
     )
     await callback.answer()
 
@@ -278,17 +272,118 @@ async def user_detail(callback: CallbackQuery):
     user_id = int(callback.data.split("_")[2])
     user = db.get_user_by_id(user_id)
     if not user:
-        await callback.answer("❌ Kullanıcı bulunamadı!", show_alert=True)
+        await callback.answer("Kullanici bulunamadi!", show_alert=True)
         return
-    text = (
-        f"👤 *Kullanıcı Detayı*\n\n"
-        f"🆔 ID: `{user[0]}`\n"
-        f"👤 Kullanıcı adı: {user[1]}\n"
-        f"💰 Bakiye: {user[3]}$\n"
-        f"📅 Kayıt: {user[7]}\n"
-    )
-    await callback.message.answer(text, reply_markup=kb.user_detail_keyboard(user_id), parse_mode="Markdown")
+    text = "Kullanici Detayi\n\nID: " + str(user[0]) + "\nKullanici adi: " + str(user[1]) + "\nBakiye: " + str(user[3]) + "$\nKayit: " + str(user[7])
+    await callback.message.answer(text, reply_markup=kb.user_detail_keyboard(user_id))
     await callback.answer()
 
-# Satın Alım Geçmişi
-@router.callback_query(F.data.startswith("order
+@router.callback_query(F.data.startswith("order_history_"))
+async def order_history(callback: CallbackQuery):
+    user_id = int(callback.data.split("_")[2])
+    orders = db.get_user_orders(user_id)
+    if not orders:
+        await callback.message.answer("Bu kullanicinin satin alim gecmisi yok.")
+        await callback.answer()
+        return
+    text = "Satin Alim Gecmisi\n\n"
+    for o in orders:
+        period_text = {"daily": "1 day", "weekly": "7 days", "monthly": "30 days"}.get(o[6], "-")
+        text += str(o[3]) + " | " + period_text + " | $" + str(o[5]) + " | " + str(o[7]) + "\n"
+    await callback.message.answer(text)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("custom_price_"))
+async def custom_price_select(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    user_id = int(callback.data.split("_")[2])
+    products = db.get_products()
+    if not products:
+        await callback.message.answer("Hic urun yok!")
+        await callback.answer()
+        return
+    await callback.message.answer(
+        "Urun secin:",
+        reply_markup=kb.custom_price_products_keyboard(products, user_id)
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("set_custom_"))
+async def set_custom_price(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+    parts = callback.data.split("_")
+    user_id = int(parts[2])
+    product_id = int(parts[3])
+    await state.update_data(user_id=user_id, product_id=product_id)
+    await callback.message.answer("Gunluk ozel fiyat girin:", reply_markup=kb.cancel_keyboard())
+    await state.set_state(CustomPrice.price_daily)
+    await callback.answer()
+
+@router.message(CustomPrice.price_daily)
+async def save_custom_price_daily(message: Message, state: FSMContext):
+    if message.text == "Cancel":
+        await state.clear()
+        await message.answer("Iptal edildi.")
+        return
+    await state.update_data(price_daily=message.text)
+    await message.answer("Haftalik ozel fiyat girin:")
+    await state.set_state(CustomPrice.price_weekly)
+
+@router.message(CustomPrice.price_weekly)
+async def save_custom_price_weekly(message: Message, state: FSMContext):
+    await state.update_data(price_weekly=message.text)
+    await message.answer("Aylik ozel fiyat girin:")
+    await state.set_state(CustomPrice.price_monthly)
+
+@router.message(CustomPrice.price_monthly)
+async def save_custom_price_monthly(message: Message, state: FSMContext):
+    data = await state.get_data()
+    db.set_custom_prices(
+        data["user_id"], data["product_id"],
+        float(data["price_daily"]), float(data["price_weekly"]), float(message.text)
+    )
+    await message.answer("Ozel fiyatlar ayarlandi!")
+    await state.clear()
+
+@router.callback_query(F.data == "admin_stats")
+async def admin_stats(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    await callback.message.answer(
+        "Istatistikler - Periyot secin:",
+        reply_markup=kb.stats_keyboard()
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("stats_"))
+async def show_stats(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    period = callback.data.split("_")[1]
+    stats = db.get_stats(period)
+    period_text = {"daily": "Gunluk", "weekly": "Haftalik", "monthly": "Aylik"}[period]
+    text = (period_text + " Istatistikler\n\n"
+            + "Toplam Satis: " + str(stats["total_orders"]) + " adet\n"
+            + "Toplam Gelir: " + str(stats["total_revenue"]) + "$\n"
+            + "Toplam Maliyet: " + str(stats["total_cost"]) + "$\n"
+            + "Net Kar: " + str(stats["net_profit"]) + "$")
+    await callback.message.answer(text)
+    await callback.answer()
+
+@router.callback_query(F.data == "admin_all_orders")
+async def admin_all_orders(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    orders = db.get_all_orders()
+    if not orders:
+        await callback.message.answer("Hic siparis yok.")
+        await callback.answer()
+        return
+    text = "Tum Siparisler\n\n"
+    for o in orders:
+        period_text = {"daily": "1 day", "weekly": "7 days", "monthly": "30 days"}.get(o[6], "-")
+        text += str(o[1]) + " | " + str(o[3]) + " | " + period_text + " | $" + str(o[5]) + " | " + str(o[7]) + "\n"
+    await callback.message.answer(text)
+    await callback.answer()
