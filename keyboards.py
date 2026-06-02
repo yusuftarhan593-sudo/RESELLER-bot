@@ -16,29 +16,29 @@ def categories_keyboard(categories):
 def products_keyboard(products, category_id):
     buttons = []
     for p in products:
-        buttons.append([InlineKeyboardButton(text=f"{p[2]} - {p[4]}₺", callback_data=f"product_{p[0]}")])
+        buttons.append([InlineKeyboardButton(text=f"{p[2]}", callback_data=f"product_{p[0]}")])
     buttons.append([InlineKeyboardButton(text="🔙 Kategoriler", callback_data="back_categories")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def product_detail_keyboard(product_id, category_id):
+def period_keyboard(product_id, price_daily, price_weekly, price_monthly):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Satın Al", callback_data=f"buy_{product_id}")],
-        [InlineKeyboardButton(text="🔙 Geri", callback_data=f"cat_{category_id}")]
+        [InlineKeyboardButton(text=f"📅 Günlük - {price_daily}₺", callback_data=f"buy_{product_id}_daily")],
+        [InlineKeyboardButton(text=f"📅 Haftalık - {price_weekly}₺", callback_data=f"buy_{product_id}_weekly")],
+        [InlineKeyboardButton(text=f"📅 Aylık - {price_monthly}₺", callback_data=f"buy_{product_id}_monthly")],
+        [InlineKeyboardButton(text="🔙 Geri", callback_data="back_categories")]
     ])
 
-def confirm_buy_keyboard(product_id):
+def confirm_buy_keyboard(product_id, period):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Onayla", callback_data=f"confirm_buy_{product_id}"),
+        [InlineKeyboardButton(text="✅ Onayla", callback_data=f"confirm_{product_id}_{period}"),
          InlineKeyboardButton(text="❌ İptal", callback_data="back_categories")]
     ])
 
-def admin_main_menu():
-    return ReplyKeyboardMarkup(keyboard=[
-        [KeyboardButton(text="📂 Kategori Yönetimi"), KeyboardButton(text="📦 Ürün Yönetimi")],
-        [KeyboardButton(text="🔑 Stok Ekle"), KeyboardButton(text="👥 Kullanıcılar")],
-        [KeyboardButton(text="💵 Bakiye Yükle"), KeyboardButton(text="📊 İstatistikler")],
-        [KeyboardButton(text="📋 Tüm Siparişler"), KeyboardButton(text="🔙 Kullanıcı Modu")]
-    ], resize_keyboard=True)
+def balance_menu_keyboard(user_id):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📋 Satın Alım Geçmişi", callback_data=f"order_history_{user_id}")],
+        [InlineKeyboardButton(text="💳 Yükleme Geçmişi", callback_data=f"topup_history_{user_id}")]
+    ])
 
 def admin_inline_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -59,48 +59,25 @@ def user_detail_keyboard(user_id):
         [InlineKeyboardButton(text="🔙 Geri", callback_data="admin_search_user")]
     ])
 
-def category_manage_keyboard(categories):
-    buttons = []
-    for cat in categories:
-        buttons.append([
-            InlineKeyboardButton(text=f"{cat[2]} {cat[1]}", callback_data=f"admin_cat_{cat[0]}"),
-            InlineKeyboardButton(text="✏️", callback_data=f"edit_cat_{cat[0]}"),
-            InlineKeyboardButton(text="🗑️", callback_data=f"del_cat_{cat[0]}")
-        ])
-    buttons.append([InlineKeyboardButton(text="➕ Yeni Kategori", callback_data="add_category")])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-def product_manage_keyboard(products):
+def custom_price_products_keyboard(products, user_id):
     buttons = []
     for p in products:
-        stock_count = p[7] if len(p) > 7 else 0
-        buttons.append([
-            InlineKeyboardButton(text=f"{p[2]} ({stock_count} stok)", callback_data=f"admin_product_{p[0]}"),
-            InlineKeyboardButton(text="💲", callback_data=f"edit_price_{p[0]}"),
-            InlineKeyboardButton(text="🗑️", callback_data=f"del_product_{p[0]}")
-        ])
-    buttons.append([InlineKeyboardButton(text="➕ Yeni Ürün", callback_data="add_product")])
+        buttons.append([InlineKeyboardButton(
+            text=f"{p[2]}",
+            callback_data=f"set_custom_{user_id}_{p[0]}"
+        )])
+    buttons.append([InlineKeyboardButton(text="🔙 Geri", callback_data=f"user_detail_{user_id}")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def stats_keyboard():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📅 Günlük", callback_data="stats_daily"),
-         InlineKeyboardButton(text="📅 Haftalık", callback_data="stats_weekly")],
-        [InlineKeyboardButton(text="📅 Aylık", callback_data="stats_monthly"),
-         InlineKeyboardButton(text="📅 Yıllık", callback_data="stats_yearly")]
-    ])
+def admin_main_menu():
+    return ReplyKeyboardMarkup(keyboard=[
+        [KeyboardButton(text="📂 Kategori Yönetimi"), KeyboardButton(text="📦 Ürün Yönetimi")],
+        [KeyboardButton(text="🔑 Stok Ekle"), KeyboardButton(text="👥 Kullanıcılar")],
+        [KeyboardButton(text="💵 Bakiye Yükle"), KeyboardButton(text="📊 İstatistikler")],
+        [KeyboardButton(text="📋 Tüm Siparişler"), KeyboardButton(text="🔙 Kullanıcı Modu")]
+    ], resize_keyboard=True)
 
 def cancel_keyboard():
     return ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text="❌ İptal")]
     ], resize_keyboard=True)
-
-def custom_price_products_keyboard(products, user_id):
-    buttons = []
-    for p in products:
-        buttons.append([InlineKeyboardButton(
-            text=f"{p[2]} - {p[4]}₺",
-            callback_data=f"set_custom_{user_id}_{p[0]}"
-        )])
-    buttons.append([InlineKeyboardButton(text="🔙 Geri", callback_data=f"user_detail_{user_id}")])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
