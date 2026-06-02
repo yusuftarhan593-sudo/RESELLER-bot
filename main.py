@@ -17,7 +17,7 @@ async def main():
     dp = Dispatcher(storage=MemoryStorage())
     dp.include_router(admin.router)
     dp.include_router(user.router)
-    print("Bot başlatıldı!")
+    print("Bot started!")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
