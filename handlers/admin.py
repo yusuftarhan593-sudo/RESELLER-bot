@@ -21,7 +21,9 @@ class AddProduct(StatesGroup):
     category_id = State()
     name = State()
     description = State()
-    price = State()
+    price_daily = State()
+    price_weekly = State()
+    price_monthly = State()
 
 class AddStock(StatesGroup):
     product_id = State()
@@ -37,9 +39,10 @@ class SearchUser(StatesGroup):
 class CustomPrice(StatesGroup):
     user_id = State()
     product_id = State()
-    price = State()
+    price_daily = State()
+    price_weekly = State()
+    price_monthly = State()
 
-# /admin komutu - inline butonlu panel
 @router.message(Command("admin"))
 async def admin_panel(message: Message):
     if not is_admin(message.from_user.id):
@@ -51,7 +54,6 @@ async def admin_panel(message: Message):
         parse_mode="Markdown"
     )
 
-# Kategori Ekle butonu
 @router.callback_query(F.data == "admin_add_category")
 async def cb_add_category(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
@@ -78,7 +80,6 @@ async def add_category_emoji(message: Message, state: FSMContext):
     await message.answer(f"✅ Kategori eklendi: {data['name']}")
     await state.clear()
 
-# Ürün Ekle butonu
 @router.callback_query(F.data == "admin_add_product")
 async def cb_add_product(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
@@ -114,17 +115,31 @@ async def add_product_name(message: Message, state: FSMContext):
 @router.message(AddProduct.description)
 async def add_product_desc(message: Message, state: FSMContext):
     await state.update_data(description=message.text)
-    await message.answer("Fiyat girin (örn: 10.5):")
-    await state.set_state(AddProduct.price)
+    await message.answer("Günlük fiyat girin (örn: 10.5):")
+    await state.set_state(AddProduct.price_daily)
 
-@router.message(AddProduct.price)
-async def add_product_price(message: Message, state: FSMContext):
+@router.message(AddProduct.price_daily)
+async def add_product_price_daily(message: Message, state: FSMContext):
+    await state.update_data(price_daily=message.text)
+    await message.answer("Haftalık fiyat girin (örn: 50):")
+    await state.set_state(AddProduct.price_weekly)
+
+@router.message(AddProduct.price_weekly)
+async def add_product_price_weekly(message: Message, state: FSMContext):
+    await state.update_data(price_weekly=message.text)
+    await message.answer("Aylık fiyat girin (örn: 150):")
+    await state.set_state(AddProduct.price_monthly)
+
+@router.message(AddProduct.price_monthly)
+async def add_product_price_monthly(message: Message, state: FSMContext):
     data = await state.get_data()
-    db.add_product(int(data["category_id"]), data["name"], data["description"], float(message.text))
+    db.add_product(
+        int(data["category_id"]), data["name"], data["description"],
+        float(data["price_daily"]), float(data["price_weekly"]), float(message.text)
+    )
     await message.answer(f"✅ Ürün eklendi: {data['name']}")
     await state.clear()
 
-# Stok Ekle butonu
 @router.callback_query(F.data == "admin_add_stock")
 async def cb_add_stock(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
@@ -160,7 +175,6 @@ async def add_stock_keys(message: Message, state: FSMContext):
     await message.answer(f"✅ {len(keys)} adet stok eklendi!")
     await state.clear()
 
-# Bakiye Ekle butonu
 @router.callback_query(F.data == "admin_add_balance")
 async def cb_add_balance(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
@@ -186,7 +200,6 @@ async def add_balance_amount(message: Message, state: FSMContext):
     await message.answer(f"✅ {message.text} ₺ eklendi!")
     await state.clear()
 
-# Kullanıcı Ara
 @router.callback_query(F.data == "admin_search_user")
 async def cb_search_user(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
@@ -210,17 +223,14 @@ async def search_user_result(message: Message, state: FSMContext):
     text = (
         f"👤 *Kullanıcı Bilgileri*\n\n"
         f"🆔 ID: `{user[0]}`\n"
-        f"👤 Ad: {user[1]}\n"
-        f"💰 Bakiye: {user[2]}₺\n"
+        f"👤 Ad: {user[2]}\n"
+        f"💰 Bakiye: {user[3]}₺\n"
     )
     await message.answer(text, reply_markup=kb.user_detail_keyboard(user_id), parse_mode="Markdown")
     await state.clear()
 
-# Satın Alım Geçmişi
 @router.callback_query(F.data.startswith("order_history_"))
 async def order_history(callback: CallbackQuery):
-    if not is_admin(callback.from_user.id):
-        return
     user_id = int(callback.data.split("_")[2])
     orders = db.get_user_orders(user_id)
     if not orders:
@@ -228,12 +238,12 @@ async def order_history(callback: CallbackQuery):
         await callback.answer()
         return
     text = f"📋 *Kullanıcı {user_id} - Satın Alım Geçmişi*\n\n"
-    for order in orders:
-        text += f"🛍️ {order[1]} | 💵 {order[2]}₺ | 📅 {order[3]}\n"
+    for o in orders:
+        period_text = {"daily": "Günlük", "weekly": "Haftalık", "monthly": "Aylık"}.get(o[6], "-")
+        text += f"🛍️ {o[3]} | {period_text} | 💵 {o[5]}₺ | 📅 {o[7]}\n"
     await callback.message.answer(text, parse_mode="Markdown")
     await callback.answer()
 
-# Kişiye Özel Fiyat - Ürün Seç
 @router.callback_query(F.data.startswith("custom_price_"))
 async def custom_price_select(callback: CallbackQuery):
     if not is_admin(callback.from_user.id):
@@ -250,7 +260,6 @@ async def custom_price_select(callback: CallbackQuery):
     )
     await callback.answer()
 
-# Kişiye Özel Fiyat - Fiyat Gir
 @router.callback_query(F.data.startswith("set_custom_"))
 async def set_custom_price(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
@@ -260,24 +269,38 @@ async def set_custom_price(callback: CallbackQuery, state: FSMContext):
     product_id = int(parts[3])
     await state.update_data(user_id=user_id, product_id=product_id)
     await callback.message.answer(
-        f"💲 Kullanıcı {user_id} için ürün {product_id}'ye özel fiyat girin:",
+        f"💲 Günlük özel fiyat girin:",
         reply_markup=kb.cancel_keyboard()
     )
-    await state.set_state(CustomPrice.price)
+    await state.set_state(CustomPrice.price_daily)
     await callback.answer()
 
-@router.message(CustomPrice.price)
-async def save_custom_price(message: Message, state: FSMContext):
+@router.message(CustomPrice.price_daily)
+async def save_custom_price_daily(message: Message, state: FSMContext):
     if message.text == "❌ İptal":
         await state.clear()
         await message.answer("İptal edildi.")
         return
+    await state.update_data(price_daily=message.text)
+    await message.answer("💲 Haftalık özel fiyat girin:")
+    await state.set_state(CustomPrice.price_weekly)
+
+@router.message(CustomPrice.price_weekly)
+async def save_custom_price_weekly(message: Message, state: FSMContext):
+    await state.update_data(price_weekly=message.text)
+    await message.answer("💲 Aylık özel fiyat girin:")
+    await state.set_state(CustomPrice.price_monthly)
+
+@router.message(CustomPrice.price_monthly)
+async def save_custom_price_monthly(message: Message, state: FSMContext):
     data = await state.get_data()
-    db.set_custom_price(data["user_id"], data["product_id"], float(message.text))
-    await message.answer(f"✅ Özel fiyat ayarlandı: {message.text}₺")
+    db.set_custom_prices(
+        data["user_id"], data["product_id"],
+        float(data["price_daily"]), float(data["price_weekly"]), float(message.text)
+    )
+    await message.answer(f"✅ Özel fiyatlar ayarlandı!")
     await state.clear()
 
-# Eski text tabanlı komutlar (geriye dönük uyumluluk)
 @router.message(F.text == "➕ Kategori Ekle")
 async def add_category_text(message: Message, state: FSMContext):
     if not is_admin(message.from_user.id):
