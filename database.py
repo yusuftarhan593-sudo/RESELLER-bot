@@ -58,6 +58,16 @@ def get_or_create_user(user_id, username, full_name):
     conn.close()
     return user
 
+def add_user_by_admin(user_id, username, full_name=""):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
+    if not c.fetchone():
+        c.execute("INSERT INTO users (user_id, username, full_name) VALUES (?, ?, ?)",
+                  (user_id, username, full_name))
+        conn.commit()
+    conn.close()
+
 def get_user(user_id):
     conn = get_conn()
     c = conn.cursor()
@@ -74,7 +84,7 @@ def get_balance(user_id):
     conn.close()
     return row[0] if row else 0
 
-def add_balance(user_id, amount, added_by, note="Manuel yükleme"):
+def add_balance(user_id, amount, added_by, note="Manual top-up"):
     conn = get_conn()
     c = conn.cursor()
     c.execute("UPDATE users SET balance = balance + ? WHERE user_id=?", (amount, user_id))
