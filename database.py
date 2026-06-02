@@ -21,3 +21,11 @@ def set_custom_price(user_id, product_id, price):
     """, (user_id, product_id, price))
     conn.commit()
     conn.close()
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS custom_prices (
+        user_id INTEGER,
+        product_id INTEGER,
+        price REAL,
+        PRIMARY KEY (user_id, product_id)
+    )
+""")
