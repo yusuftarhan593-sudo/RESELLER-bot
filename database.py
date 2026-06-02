@@ -24,13 +24,14 @@ def init_db():
         created_at TEXT DEFAULT (datetime('now')))""")
     c.execute("""CREATE TABLE IF NOT EXISTS categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL, emoji TEXT DEFAULT '📦', is_active INTEGER DEFAULT 1)""")
+        name TEXT NOT NULL, emoji TEXT DEFAULT '', is_active INTEGER DEFAULT 1)""")
     c.execute("""CREATE TABLE IF NOT EXISTS products (
         id INTEGER PRIMARY KEY AUTOINCREMENT, category_id INTEGER,
         name TEXT NOT NULL, description TEXT,
         price_daily REAL DEFAULT 0,
         price_weekly REAL DEFAULT 0,
         price_monthly REAL DEFAULT 0,
+        cost_price REAL DEFAULT 0,
         is_active INTEGER DEFAULT 1)""")
     c.execute("""CREATE TABLE IF NOT EXISTS stock (
         id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER,
@@ -125,7 +126,7 @@ def get_categories():
     conn.close()
     return cats
 
-def add_category(name, emoji="📦"):
+def add_category(name, emoji=""):
     conn = get_conn()
     c = conn.cursor()
     c.execute("INSERT INTO categories (name, emoji) VALUES (?, ?)", (name, emoji))
@@ -151,11 +152,11 @@ def get_product(product_id):
     conn.close()
     return product
 
-def add_product(category_id, name, description, price_daily, price_weekly, price_monthly):
+def add_product(category_id, name, description, price_daily, price_weekly, price_monthly, cost_price):
     conn = get_conn()
     c = conn.cursor()
-    c.execute("INSERT INTO products (category_id, name, description, price_daily, price_weekly, price_monthly) VALUES (?, ?, ?, ?, ?, ?)",
-              (category_id, name, description, price_daily, price_weekly, price_monthly))
+    c.execute("INSERT INTO products (category_id, name, description, price_daily, price_weekly, price_monthly, cost_price) VALUES (?, ?, ?, ?, ?, ?, ?)",
+              (category_id, name, description, price_daily, price_weekly, price_monthly, cost_price))
     conn.commit()
     conn.close()
 
@@ -232,3 +233,36 @@ def get_user_orders(user_id):
     orders = c.fetchall()
     conn.close()
     return orders
+
+def get_all_orders():
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT * FROM orders ORDER BY created_at DESC LIMIT 50")
+    orders = c.fetchall()
+    conn.close()
+    return orders
+
+def get_stats(period):
+    conn = get_conn()
+    c = conn.cursor()
+    if period == "daily":
+        date_filter = "date(created_at) = date('now')"
+    elif period == "weekly":
+        date_filter = "created_at >= datetime('now', '-7 days')"
+    else:
+        date_filter = "created_at >= datetime('now', '-30 days')"
+    c.execute("SELECT COUNT(*), SUM(price) FROM orders WHERE " + date_filter)
+    row = c.fetchone()
+    total_orders = row[0] or 0
+    total_revenue = round(row[1] or 0, 2)
+    c.execute("SELECT SUM(p.cost_price) FROM orders o JOIN products p ON o.product_id = p.id WHERE " + date_filter)
+    cost_row = c.fetchone()
+    total_cost = round(cost_row[0] or 0, 2)
+    net_profit = round(total_revenue - total_cost, 2)
+    conn.close()
+    return {
+        "total_orders": total_orders,
+        "total_revenue": total_revenue,
+        "total_cost": total_cost,
+        "net_profit": net_profit
+    }
