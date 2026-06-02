@@ -1,38 +1,62 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 import database as db
 import keyboards as kb
 
 router = Router()
 
+class LoginState(StatesGroup):
+    username = State()
+    password = State()
+
 @router.message(Command("start"))
-async def start(message: Message):
-    user = db.get_user(message.from_user.id)
-    if not user:
-        await message.answer("❌ Access denied. Contact admin.")
+async def start(message: Message, state: FSMContext):
+    user = db.get_user_by_telegram(message.from_user.id)
+    if user:
+        await message.answer(f"Welcome back, {user[1]}! 👋", reply_markup=kb.main_menu())
         return
-    await message.answer("Welcome to the store! 🛍", reply_markup=kb.main_menu())
+    await message.answer("👋 Welcome!\n\nPlease enter your username:")
+    await state.set_state(LoginState.username)
+
+@router.message(LoginState.username)
+async def login_username(message: Message, state: FSMContext):
+    await state.update_data(username=message.text)
+    await message.answer("🔒 Enter your password:")
+    await state.set_state(LoginState.password)
+
+@router.message(LoginState.password)
+async def login_password(message: Message, state: FSMContext):
+    data = await state.get_data()
+    user = db.login_user(data["username"], message.text, message.from_user.id)
+    if not user:
+        await message.answer("❌ Wrong username or password. Try again.\n\nEnter your username:")
+        await state.set_state(LoginState.username)
+        return
+    await state.clear()
+    await message.answer(f"✅ Login successful!\n\nWelcome, {user[1]}! 🎉", reply_markup=kb.main_menu())
 
 @router.message(F.text == "🏦 Account")
 async def account(message: Message):
-    user = db.get_user(message.from_user.id)
+    user = db.get_user_by_telegram(message.from_user.id)
     if not user:
-        await message.answer("❌ Access denied.")
+        await message.answer("❌ Please login first. Type /start")
         return
     await message.answer(
         f"👤 *Your account:*\n\n"
         f"- Login: {user[1]}\n"
         f"- Balance: {user[3]}$",
-        reply_markup=kb.balance_menu_keyboard(message.from_user.id),
+        reply_markup=kb.balance_menu_keyboard(user[0]),
         parse_mode="Markdown"
     )
 
 @router.message(F.text == "🛍️ Buy Keys")
 async def buy_keys(message: Message):
-    user = db.get_user(message.from_user.id)
+    user = db.get_user_by_telegram(message.from_user.id)
     if not user:
-        await message.answer("❌ Access denied.")
+        await message.answer("❌ Please login first. Type /start")
         return
     categories = db.get_categories()
     if not categories:
@@ -42,10 +66,6 @@ async def buy_keys(message: Message):
 
 @router.callback_query(F.data.startswith("cat_"))
 async def show_products(callback: CallbackQuery):
-    user = db.get_user(callback.from_user.id)
-    if not user:
-        await callback.answer("❌ Access denied.", show_alert=True)
-        return
     category_id = int(callback.data.split("_")[1])
     products = db.get_products(category_id)
     if not products:
@@ -58,18 +78,19 @@ async def show_products(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("product_"))
 async def show_product_periods(callback: CallbackQuery):
+    user = db.get_user_by_telegram(callback.from_user.id)
     product_id = int(callback.data.split("_")[1])
     product = db.get_product(product_id)
     if not product:
         await callback.answer("❌ Product not found!", show_alert=True)
         return
-    custom = db.get_custom_prices(callback.from_user.id, product_id)
+    custom = db.get_custom_prices(user[0], product_id) if user else None
     price_daily = custom[0] if custom else product[4]
     price_weekly = custom[1] if custom else product[5]
     price_monthly = custom[2] if custom else product[6]
     stock = db.get_stock_count(product_id)
     await callback.message.answer(
-        f"🗂 *Choose a key type for {product[2]}:*",
+        f"🗂 *Choose a key type for {product[2]}:*\n\n📊 Stock: {stock}",
         reply_markup=kb.period_keyboard(product_id, price_daily, price_weekly, price_monthly),
         parse_mode="Markdown"
     )
@@ -85,11 +106,12 @@ async def check_status(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("buy_"))
 async def confirm_buy(callback: CallbackQuery):
+    user = db.get_user_by_telegram(callback.from_user.id)
     parts = callback.data.split("_")
     product_id = int(parts[1])
     period = parts[2]
     product = db.get_product(product_id)
-    custom = db.get_custom_prices(callback.from_user.id, product_id)
+    custom = db.get_custom_prices(user[0], product_id) if user else None
     if period == "daily":
         price = custom[0] if custom else product[4]
         period_text = "1 day"
@@ -112,10 +134,11 @@ async def confirm_buy(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("confirm_"))
 async def do_buy(callback: CallbackQuery):
+    user = db.get_user_by_telegram(callback.from_user.id)
     parts = callback.data.split("_")
     product_id = int(parts[1])
     period = parts[2]
-    result = db.buy_product(callback.from_user.id, product_id, period)
+    result = db.buy_product(user[0], product_id, period)
     if result is None:
         await callback.message.answer("❌ Out of stock!")
     elif result is False:
@@ -126,8 +149,12 @@ async def do_buy(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("order_history_"))
 async def order_history_user(callback: CallbackQuery):
+    user = db.get_user_by_telegram(callback.from_user.id)
+    if not user:
+        await callback.answer("❌ Unauthorized!", show_alert=True)
+        return
     user_id = int(callback.data.split("_")[2])
-    if callback.from_user.id != user_id:
+    if user[0] != user_id:
         await callback.answer("❌ Unauthorized!", show_alert=True)
         return
     orders = db.get_user_orders(user_id)
@@ -150,7 +177,11 @@ async def back_categories(callback: CallbackQuery):
 
 @router.message(F.text == "📋 Orders")
 async def orders(message: Message):
-    orders = db.get_user_orders(message.from_user.id)
+    user = db.get_user_by_telegram(message.from_user.id)
+    if not user:
+        await message.answer("❌ Please login first. Type /start")
+        return
+    orders = db.get_user_orders(user[0])
     if not orders:
         await message.answer("📋 No orders yet.")
         return
@@ -162,4 +193,12 @@ async def orders(message: Message):
 
 @router.message(F.text == "🚀 Log out")
 async def logout(message: Message):
-    await message.answer("You have been logged out.", reply_markup=None)
+    user = db.get_user_by_telegram(message.from_user.id)
+    if user:
+        import sqlite3
+        conn = sqlite3.connect("bot.db")
+        c = conn.cursor()
+        c.execute("UPDATE users SET telegram_id=NULL WHERE id=?", (user[0],))
+        conn.commit()
+        conn.close()
+    await message.answer("👋 Logged out successfully. Type /start to login again.", reply_markup=None)
