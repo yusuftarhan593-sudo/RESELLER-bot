@@ -1,5 +1,5 @@
 import sqlite3
-import os
+import hashlib
 from datetime import datetime
 
 DB_NAME = "bot.db"
@@ -7,13 +7,20 @@ DB_NAME = "bot.db"
 def get_conn():
     return sqlite3.connect(DB_NAME)
 
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
 def init_db():
     conn = get_conn()
     c = conn.cursor()
     c.execute("""CREATE TABLE IF NOT EXISTS users (
-        user_id INTEGER PRIMARY KEY, username TEXT,
-        full_name TEXT, balance REAL DEFAULT 0,
-        custom_discount REAL DEFAULT 0, is_banned INTEGER DEFAULT 0,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        balance REAL DEFAULT 0,
+        language TEXT DEFAULT 'en',
+        is_banned INTEGER DEFAULT 0,
+        telegram_id INTEGER DEFAULT NULL,
         created_at TEXT DEFAULT (datetime('now')))""")
     c.execute("""CREATE TABLE IF NOT EXISTS categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,42 +51,59 @@ def init_db():
     conn.commit()
     conn.close()
 
-def get_or_create_user(user_id, username, full_name):
+def add_user_by_admin(username, password):
     conn = get_conn()
     c = conn.cursor()
-    c.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
+    c.execute("SELECT * FROM users WHERE username=?", (username,))
+    if c.fetchone():
+        conn.close()
+        return False
+    c.execute("INSERT INTO users (username, password) VALUES (?, ?)",
+              (username, hash_password(password)))
+    conn.commit()
+    conn.close()
+    return True
+
+def login_user(username, password, telegram_id):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT * FROM users WHERE username=? AND password=?",
+              (username, hash_password(password)))
     user = c.fetchone()
-    if not user:
-        c.execute("INSERT INTO users (user_id, username, full_name) VALUES (?, ?, ?)",
-                  (user_id, username, full_name))
+    if user:
+        c.execute("UPDATE users SET telegram_id=? WHERE username=?", (telegram_id, username))
         conn.commit()
-        c.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
-        user = c.fetchone()
     conn.close()
     return user
 
-def add_user_by_admin(user_id, username, full_name=""):
+def get_user_by_telegram(telegram_id):
     conn = get_conn()
     c = conn.cursor()
-    c.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
-    if not c.fetchone():
-        c.execute("INSERT INTO users (user_id, username, full_name) VALUES (?, ?, ?)",
-                  (user_id, username, full_name))
-        conn.commit()
-    conn.close()
-
-def get_user(user_id):
-    conn = get_conn()
-    c = conn.cursor()
-    c.execute("SELECT * FROM users WHERE user_id=?", (user_id,))
+    c.execute("SELECT * FROM users WHERE telegram_id=?", (telegram_id,))
     user = c.fetchone()
     conn.close()
     return user
+
+def get_user_by_id(user_id):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT * FROM users WHERE id=?", (user_id,))
+    user = c.fetchone()
+    conn.close()
+    return user
+
+def get_all_users():
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT * FROM users ORDER BY created_at DESC")
+    users = c.fetchall()
+    conn.close()
+    return users
 
 def get_balance(user_id):
     conn = get_conn()
     c = conn.cursor()
-    c.execute("SELECT balance FROM users WHERE user_id=?", (user_id,))
+    c.execute("SELECT balance FROM users WHERE id=?", (user_id,))
     row = c.fetchone()
     conn.close()
     return row[0] if row else 0
@@ -87,7 +111,7 @@ def get_balance(user_id):
 def add_balance(user_id, amount, added_by, note="Manual top-up"):
     conn = get_conn()
     c = conn.cursor()
-    c.execute("UPDATE users SET balance = balance + ? WHERE user_id=?", (amount, user_id))
+    c.execute("UPDATE users SET balance = balance + ? WHERE id=?", (amount, user_id))
     c.execute("INSERT INTO balance_logs (user_id, amount, note, added_by) VALUES (?, ?, ?, ?)",
               (user_id, amount, note, added_by))
     conn.commit()
@@ -192,7 +216,7 @@ def buy_product(user_id, product_id, period):
     if balance < price:
         conn.close()
         return False
-    c.execute("UPDATE users SET balance = balance - ? WHERE user_id=?", (price, user_id))
+    c.execute("UPDATE users SET balance = balance - ? WHERE id=?", (price, user_id))
     c.execute("UPDATE stock SET is_sold=1, sold_to=?, sold_at=datetime('now') WHERE id=?",
               (user_id, stock[0]))
     c.execute("INSERT INTO orders (user_id, product_id, product_name, key_code, price, period) VALUES (?, ?, ?, ?, ?, ?)",
