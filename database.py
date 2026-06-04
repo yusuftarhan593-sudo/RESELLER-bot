@@ -1,6 +1,5 @@
 import sqlite3
 import hashlib
-from datetime import datetime
 
 DB_NAME = "/app/data/bot.db"
 
@@ -128,6 +127,14 @@ def get_categories():
     cats = c.fetchall()
     conn.close()
     return cats
+
+def get_category_by_id(category_id):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("SELECT * FROM categories WHERE id=?", (category_id,))
+    cat = c.fetchone()
+    conn.close()
+    return cat
 
 def add_category(name, emoji=""):
     conn = get_conn()
