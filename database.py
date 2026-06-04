@@ -31,7 +31,9 @@ def init_db():
         price_daily REAL DEFAULT 0,
         price_weekly REAL DEFAULT 0,
         price_monthly REAL DEFAULT 0,
-        cost_price REAL DEFAULT 0,
+        cost_daily REAL DEFAULT 0,
+        cost_weekly REAL DEFAULT 0,
+        cost_monthly REAL DEFAULT 0,
         is_active INTEGER DEFAULT 1)""")
     c.execute("""CREATE TABLE IF NOT EXISTS stock (
         id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER,
@@ -153,11 +155,11 @@ def get_product(product_id):
     conn.close()
     return product
 
-def add_product(category_id, name, description, price_daily, price_weekly, price_monthly, cost_price):
+def add_product(category_id, name, description, price_daily, price_weekly, price_monthly, cost_daily, cost_weekly, cost_monthly):
     conn = get_conn()
     c = conn.cursor()
-    c.execute("INSERT INTO products (category_id, name, description, price_daily, price_weekly, price_monthly, cost_price) VALUES (?, ?, ?, ?, ?, ?, ?)",
-              (category_id, name, description, price_daily, price_weekly, price_monthly, cost_price))
+    c.execute("INSERT INTO products (category_id, name, description, price_daily, price_weekly, price_monthly, cost_daily, cost_weekly, cost_monthly) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              (category_id, name, description, price_daily, price_weekly, price_monthly, cost_daily, cost_weekly, cost_monthly))
     conn.commit()
     conn.close()
 
@@ -171,13 +173,6 @@ def get_stock_count(product_id, period=None):
     count = c.fetchone()[0]
     conn.close()
     return count
-
-def add_stock(product_id, key_code):
-    conn = get_conn()
-    c = conn.cursor()
-    c.execute("INSERT INTO stock (product_id, key_code) VALUES (?, ?)", (product_id, key_code))
-    conn.commit()
-    conn.close()
 
 def add_stock_with_period(product_id, key_code, period):
     conn = get_conn()
@@ -257,16 +252,19 @@ def get_stats(period):
     conn = get_conn()
     c = conn.cursor()
     if period == "daily":
-        date_filter = "date(created_at) = date('now')"
+        date_filter = "date(o.created_at) = date('now')"
+        cost_col = "p.cost_daily"
     elif period == "weekly":
-        date_filter = "created_at >= datetime('now', '-7 days')"
+        date_filter = "o.created_at >= datetime('now', '-7 days')"
+        cost_col = "p.cost_weekly"
     else:
-        date_filter = "created_at >= datetime('now', '-30 days')"
-    c.execute("SELECT COUNT(*), SUM(price) FROM orders WHERE " + date_filter)
+        date_filter = "o.created_at >= datetime('now', '-30 days')"
+        cost_col = "p.cost_monthly"
+    c.execute("SELECT COUNT(*), SUM(price) FROM orders o WHERE " + date_filter)
     row = c.fetchone()
     total_orders = row[0] or 0
     total_revenue = round(row[1] or 0, 2)
-    c.execute("SELECT SUM(p.cost_price) FROM orders o JOIN products p ON o.product_id = p.id WHERE " + date_filter)
+    c.execute("SELECT SUM(" + cost_col + ") FROM orders o JOIN products p ON o.product_id = p.id WHERE " + date_filter)
     cost_row = c.fetchone()
     total_cost = round(cost_row[0] or 0, 2)
     net_profit = round(total_revenue - total_cost, 2)
