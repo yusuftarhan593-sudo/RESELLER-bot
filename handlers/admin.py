@@ -28,6 +28,7 @@ class AddProduct(StatesGroup):
 
 class AddStock(StatesGroup):
     product_id = State()
+    period = State()
     keys = State()
 
 class AddBalance(StatesGroup):
@@ -52,8 +53,7 @@ async def admin_panel(message: Message):
         return
     await message.answer(
         "Admin Paneli\nNe yapmak istersiniz?",
-        reply_markup=kb.admin_inline_menu(),
-        parse_mode="Markdown"
+        reply_markup=kb.admin_inline_menu()
     )
 
 @router.callback_query(F.data == "admin_add_category")
@@ -71,7 +71,7 @@ async def add_category_name(message: Message, state: FSMContext):
         await message.answer("Iptal edildi.")
         return
     await state.update_data(name=message.text)
-    await message.answer("Emoji girin (opsiyonel, - yazin atlamak icin):")
+    await message.answer("Emoji girin (- yazin atlamak icin):")
     await state.set_state(AddCategory.emoji)
 
 @router.message(AddCategory.emoji)
@@ -172,16 +172,30 @@ async def add_stock_product(message: Message, state: FSMContext):
         await message.answer("Iptal edildi.")
         return
     await state.update_data(product_id=message.text)
-    await message.answer("Key/kodlari girin (her satira bir tane):")
+    await callback_message_answer_period(message, state)
+
+async def callback_message_answer_period(message, state):
+    await message.answer(
+        "Hangi periyot icin stok ekleyeceksiniz?",
+        reply_markup=kb.stock_period_keyboard()
+    )
+
+@router.callback_query(F.data.startswith("stock_period_"))
+async def stock_period_select(callback: CallbackQuery, state: FSMContext):
+    period = callback.data.split("_")[2]
+    await state.update_data(period=period)
+    period_text = {"daily": "Gunluk (1 gun)", "weekly": "Haftalik (7 gun)", "monthly": "Aylik (30 gun)"}[period]
+    await callback.message.answer("Periyot: " + period_text + "\n\nKey/kodlari girin (her satira bir tane):")
     await state.set_state(AddStock.keys)
+    await callback.answer()
 
 @router.message(AddStock.keys)
 async def add_stock_keys(message: Message, state: FSMContext):
     data = await state.get_data()
     keys = message.text.strip().split("\n")
     for key in keys:
-        db.add_stock(int(data["product_id"]), key.strip())
-    await message.answer(str(len(keys)) + " adet stok eklendi!")
+        db.add_stock_with_period(int(data["product_id"]), key.strip(), data["period"])
+    await message.answer(str(len(keys)) + " adet stok eklendi! Periyot: " + data["period"])
     await state.clear()
 
 @router.callback_query(F.data == "admin_add_balance")
@@ -194,13 +208,13 @@ async def cb_add_balance(callback: CallbackQuery, state: FSMContext):
         await callback.answer()
         return
     await callback.message.answer(
-        "Bakiye eklenecek kullaniciy seçin:",
+        "Bakiye eklenecek kullaniciy secin:",
         reply_markup=kb.users_list_keyboard(users, "bal")
     )
     await callback.answer()
 
-@router.callback_query(F.data.startswith("bal_add_"))
-async def bal_add_select(callback: CallbackQuery, state: FSMContext):
+@router.callback_query(F.data.startswith("bal_select_"))
+async def bal_select(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
         return
     user_id = int(callback.data.split("_")[2])
