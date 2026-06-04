@@ -24,11 +24,12 @@ class AddProduct(StatesGroup):
     price_daily = State()
     price_weekly = State()
     price_monthly = State()
-    cost_price = State()
+    cost_daily = State()
+    cost_weekly = State()
+    cost_monthly = State()
 
 class AddStock(StatesGroup):
     product_id = State()
-    period = State()
     keys = State()
 
 class AddBalance(StatesGroup):
@@ -117,34 +118,46 @@ async def add_product_name(message: Message, state: FSMContext):
 @router.message(AddProduct.description)
 async def add_product_desc(message: Message, state: FSMContext):
     await state.update_data(description=message.text)
-    await message.answer("Gunluk fiyat girin (ornek: 1.50):")
+    await message.answer("Gunluk satis fiyati girin (ornek: 1.50):")
     await state.set_state(AddProduct.price_daily)
 
 @router.message(AddProduct.price_daily)
 async def add_product_price_daily(message: Message, state: FSMContext):
     await state.update_data(price_daily=message.text)
-    await message.answer("Haftalik fiyat girin (ornek: 8.00):")
+    await message.answer("Haftalik satis fiyati girin (ornek: 8.00):")
     await state.set_state(AddProduct.price_weekly)
 
 @router.message(AddProduct.price_weekly)
 async def add_product_price_weekly(message: Message, state: FSMContext):
     await state.update_data(price_weekly=message.text)
-    await message.answer("Aylik fiyat girin (ornek: 16.00):")
+    await message.answer("Aylik satis fiyati girin (ornek: 16.00):")
     await state.set_state(AddProduct.price_monthly)
 
 @router.message(AddProduct.price_monthly)
 async def add_product_price_monthly(message: Message, state: FSMContext):
     await state.update_data(price_monthly=message.text)
-    await message.answer("Maliyet fiyati girin (ornek: 0.80):")
-    await state.set_state(AddProduct.cost_price)
+    await message.answer("Gunluk MALIYET girin (ornek: 0.80):")
+    await state.set_state(AddProduct.cost_daily)
 
-@router.message(AddProduct.cost_price)
-async def add_product_cost(message: Message, state: FSMContext):
+@router.message(AddProduct.cost_daily)
+async def add_product_cost_daily(message: Message, state: FSMContext):
+    await state.update_data(cost_daily=message.text)
+    await message.answer("Haftalik MALIYET girin (ornek: 5.00):")
+    await state.set_state(AddProduct.cost_weekly)
+
+@router.message(AddProduct.cost_weekly)
+async def add_product_cost_weekly(message: Message, state: FSMContext):
+    await state.update_data(cost_weekly=message.text)
+    await message.answer("Aylik MALIYET girin (ornek: 12.00):")
+    await state.set_state(AddProduct.cost_monthly)
+
+@router.message(AddProduct.cost_monthly)
+async def add_product_cost_monthly(message: Message, state: FSMContext):
     data = await state.get_data()
     db.add_product(
         int(data["category_id"]), data["name"], data["description"],
-        float(data["price_daily"]), float(data["price_weekly"]),
-        float(data["price_monthly"]), float(message.text)
+        float(data["price_daily"]), float(data["price_weekly"]), float(data["price_monthly"]),
+        float(data["cost_daily"]), float(data["cost_weekly"]), float(message.text)
     )
     await message.answer("Urun eklendi: " + data["name"])
     await state.clear()
@@ -172,9 +185,6 @@ async def add_stock_product(message: Message, state: FSMContext):
         await message.answer("Iptal edildi.")
         return
     await state.update_data(product_id=message.text)
-    await callback_message_answer_period(message, state)
-
-async def callback_message_answer_period(message, state):
     await message.answer(
         "Hangi periyot icin stok ekleyeceksiniz?",
         reply_markup=kb.stock_period_keyboard()
@@ -184,7 +194,7 @@ async def callback_message_answer_period(message, state):
 async def stock_period_select(callback: CallbackQuery, state: FSMContext):
     period = callback.data.split("_")[2]
     await state.update_data(period=period)
-    period_text = {"daily": "Gunluk (1 gun)", "weekly": "Haftalik (7 gun)", "monthly": "Aylik (30 gun)"}[period]
+    period_text = {"daily": "1 Gun", "weekly": "7 Gun", "monthly": "30 Gun"}[period]
     await callback.message.answer("Periyot: " + period_text + "\n\nKey/kodlari girin (her satira bir tane):")
     await state.set_state(AddStock.keys)
     await callback.answer()
@@ -380,9 +390,9 @@ async def show_stats(callback: CallbackQuery):
     period_text = {"daily": "Gunluk", "weekly": "Haftalik", "monthly": "Aylik"}[period]
     text = (period_text + " Istatistikler\n\n"
             + "Toplam Satis: " + str(stats["total_orders"]) + " adet\n"
-            + "Toplam Gelir: " + str(stats["total_revenue"]) + "$\n"
-            + "Toplam Maliyet: " + str(stats["total_cost"]) + "$\n"
-            + "Net Kar: " + str(stats["net_profit"]) + "$")
+            + "Toplam Gelir: $" + str(stats["total_revenue"]) + "\n"
+            + "Toplam Maliyet: $" + str(stats["total_cost"]) + "\n"
+            + "Net Kar: $" + str(stats["net_profit"]))
     await callback.message.answer(text)
     await callback.answer()
 
