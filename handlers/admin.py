@@ -30,6 +30,7 @@ class AddProduct(StatesGroup):
 
 class AddStock(StatesGroup):
     product_id = State()
+    period = State()
     keys = State()
 
 class AddBalance(StatesGroup):
@@ -192,6 +193,7 @@ async def add_stock_product(message: Message, state: FSMContext):
         return
     await state.update_data(product_id=message.text)
     await message.answer("Hangi periyot icin stok ekleyeceksiniz?", reply_markup=kb.stock_period_keyboard())
+    await state.set_state(AddStock.period)
 
 @router.callback_query(F.data.startswith("stock_period_"))
 async def stock_period_select(callback: CallbackQuery, state: FSMContext):
