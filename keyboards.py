@@ -2,8 +2,8 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeybo
 
 def main_menu():
     return ReplyKeyboardMarkup(keyboard=[
-        [KeyboardButton(text="🛍️ Buy Keys"), KeyboardButton(text="🏦 Account")],
-        [KeyboardButton(text="📋 Orders"), KeyboardButton(text="🚀 Log out")]
+        [KeyboardButton(text="Buy Keys"), KeyboardButton(text="Account")],
+        [KeyboardButton(text="Orders"), KeyboardButton(text="Log out")]
     ], resize_keyboard=True)
 
 def categories_keyboard(categories):
@@ -20,13 +20,13 @@ def products_keyboard(products, category_id):
     buttons.append([InlineKeyboardButton(text="Back", callback_data="back_categories")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def period_keyboard(product_id, price_daily, price_weekly, price_monthly):
+def period_keyboard(product_id, price_daily, price_weekly, price_monthly, stock_daily, stock_weekly, stock_monthly):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Get files", callback_data="getfiles_" + str(product_id)),
          InlineKeyboardButton(text="Check status", callback_data="checkstatus_" + str(product_id))],
-        [InlineKeyboardButton(text="1 day - " + str(price_daily) + "$", callback_data="buy_" + str(product_id) + "_daily")],
-        [InlineKeyboardButton(text="7 day - " + str(price_weekly) + "$", callback_data="buy_" + str(product_id) + "_weekly")],
-        [InlineKeyboardButton(text="30 day - " + str(price_monthly) + "$", callback_data="buy_" + str(product_id) + "_monthly")],
+        [InlineKeyboardButton(text="1 day - " + str(price_daily) + "$ (" + str(stock_daily) + " in stock)", callback_data="buy_" + str(product_id) + "_daily")],
+        [InlineKeyboardButton(text="7 day - " + str(price_weekly) + "$ (" + str(stock_weekly) + " in stock)", callback_data="buy_" + str(product_id) + "_weekly")],
+        [InlineKeyboardButton(text="30 day - " + str(price_monthly) + "$ (" + str(stock_monthly) + " in stock)", callback_data="buy_" + str(product_id) + "_monthly")],
         [InlineKeyboardButton(text="Go back", callback_data="back_categories")]
     ])
 
@@ -44,21 +44,21 @@ def balance_menu_keyboard(user_id):
 
 def admin_inline_menu():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Kategori Ekle", callback_data="admin_add_category"),
-         InlineKeyboardButton(text="Urun Ekle", callback_data="admin_add_product")],
-        [InlineKeyboardButton(text="Stok Ekle", callback_data="admin_add_stock"),
-         InlineKeyboardButton(text="Bakiye Ekle", callback_data="admin_add_balance")],
-        [InlineKeyboardButton(text="Kullanici Ekle", callback_data="admin_add_user"),
-         InlineKeyboardButton(text="Kullanicilar", callback_data="admin_search_user")],
-        [InlineKeyboardButton(text="Istatistikler", callback_data="admin_stats"),
-         InlineKeyboardButton(text="Tum Siparisler", callback_data="admin_all_orders")]
+        [InlineKeyboardButton(text="📂 Kategori Ekle", callback_data="admin_add_category"),
+         InlineKeyboardButton(text="📦 Urun Ekle", callback_data="admin_add_product")],
+        [InlineKeyboardButton(text="🔑 Stok Ekle", callback_data="admin_add_stock"),
+         InlineKeyboardButton(text="💵 Bakiye Ekle", callback_data="admin_add_balance")],
+        [InlineKeyboardButton(text="👥 Kullanici Ekle", callback_data="admin_add_user"),
+         InlineKeyboardButton(text="🔍 Kullanicilar", callback_data="admin_search_user")],
+        [InlineKeyboardButton(text="📊 Istatistikler", callback_data="admin_stats"),
+         InlineKeyboardButton(text="📋 Tum Siparisler", callback_data="admin_all_orders")]
     ])
 
 def user_detail_keyboard(user_id):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Bakiye Ekle", callback_data="bal_add_" + str(user_id)),
-         InlineKeyboardButton(text="Ozel Fiyat", callback_data="custom_price_" + str(user_id))],
-        [InlineKeyboardButton(text="Satin Alim Gecmisi", callback_data="order_history_" + str(user_id))],
+        [InlineKeyboardButton(text="💵 Bakiye Ekle", callback_data="bal_add_" + str(user_id)),
+         InlineKeyboardButton(text="💲 Ozel Fiyat", callback_data="custom_price_" + str(user_id))],
+        [InlineKeyboardButton(text="📋 Satin Alim Gecmisi", callback_data="order_history_" + str(user_id))],
         [InlineKeyboardButton(text="Geri", callback_data="admin_search_user")]
     ])
 
@@ -70,7 +70,7 @@ def users_list_keyboard(users, prefix="detail"):
         else:
             cb = "admin_user_" + str(u[0])
         buttons.append([InlineKeyboardButton(
-            text=str(u[1]) + " | " + str(u[3]) + "$",
+            text="👤 " + str(u[1]) + " | 💰 " + str(u[3]) + "$",
             callback_data=cb
         )])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -87,9 +87,9 @@ def custom_price_products_keyboard(products, user_id):
 
 def stats_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Gunluk", callback_data="stats_daily"),
-         InlineKeyboardButton(text="Haftalik", callback_data="stats_weekly")],
-        [InlineKeyboardButton(text="Aylik", callback_data="stats_monthly")]
+        [InlineKeyboardButton(text="📅 Gunluk", callback_data="stats_daily"),
+         InlineKeyboardButton(text="📅 Haftalik", callback_data="stats_weekly")],
+        [InlineKeyboardButton(text="📅 Aylik", callback_data="stats_monthly")]
     ])
 
 def cancel_keyboard():
