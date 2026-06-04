@@ -24,9 +24,9 @@ def period_keyboard(product_id, price_daily, price_weekly, price_monthly, stock_
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📁 Get files", callback_data="getfiles_" + str(product_id)),
          InlineKeyboardButton(text="🛡 Check status", callback_data="checkstatus_" + str(product_id))],
-        [InlineKeyboardButton(text="1 day - " + str(price_daily) + "$ (" + str(stock_daily) + " in stock)", callback_data="buy_" + str(product_id) + "_daily")],
-        [InlineKeyboardButton(text="7 day - " + str(price_weekly) + "$ (" + str(stock_weekly) + " in stock)", callback_data="buy_" + str(product_id) + "_weekly")],
-        [InlineKeyboardButton(text="30 day - " + str(price_monthly) + "$ (" + str(stock_monthly) + " in stock)", callback_data="buy_" + str(product_id) + "_monthly")],
+        [InlineKeyboardButton(text="1 day - " + str(price_daily) + "$", callback_data="buy_" + str(product_id) + "_daily")],
+        [InlineKeyboardButton(text="7 day - " + str(price_weekly) + "$", callback_data="buy_" + str(product_id) + "_weekly")],
+        [InlineKeyboardButton(text="30 day - " + str(price_monthly) + "$", callback_data="buy_" + str(product_id) + "_monthly")],
         [InlineKeyboardButton(text="🔙 Go back", callback_data="back_categories")]
     ])
 
