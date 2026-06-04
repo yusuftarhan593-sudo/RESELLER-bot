@@ -4,7 +4,6 @@ from datetime import datetime
 
 DB_NAME = "/app/data/bot.db"
 
-
 def get_conn():
     return sqlite3.connect(DB_NAME)
 
@@ -37,6 +36,7 @@ def init_db():
     c.execute("""CREATE TABLE IF NOT EXISTS stock (
         id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER,
         key_code TEXT NOT NULL, is_sold INTEGER DEFAULT 0,
+        period TEXT DEFAULT 'daily',
         sold_to INTEGER DEFAULT NULL, sold_at TEXT DEFAULT NULL)""")
     c.execute("""CREATE TABLE IF NOT EXISTS orders (
         id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER,
@@ -161,10 +161,13 @@ def add_product(category_id, name, description, price_daily, price_weekly, price
     conn.commit()
     conn.close()
 
-def get_stock_count(product_id):
+def get_stock_count(product_id, period=None):
     conn = get_conn()
     c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM stock WHERE product_id=? AND is_sold=0", (product_id,))
+    if period:
+        c.execute("SELECT COUNT(*) FROM stock WHERE product_id=? AND is_sold=0 AND period=?", (product_id, period))
+    else:
+        c.execute("SELECT COUNT(*) FROM stock WHERE product_id=? AND is_sold=0", (product_id,))
     count = c.fetchone()[0]
     conn.close()
     return count
@@ -173,6 +176,13 @@ def add_stock(product_id, key_code):
     conn = get_conn()
     c = conn.cursor()
     c.execute("INSERT INTO stock (product_id, key_code) VALUES (?, ?)", (product_id, key_code))
+    conn.commit()
+    conn.close()
+
+def add_stock_with_period(product_id, key_code, period):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("INSERT INTO stock (product_id, key_code, period) VALUES (?, ?, ?)", (product_id, key_code, period))
     conn.commit()
     conn.close()
 
@@ -201,7 +211,7 @@ def set_custom_prices(user_id, product_id, price_daily, price_weekly, price_mont
 def buy_product(user_id, product_id, period):
     conn = get_conn()
     c = conn.cursor()
-    c.execute("SELECT * FROM stock WHERE product_id=? AND is_sold=0 LIMIT 1", (product_id,))
+    c.execute("SELECT * FROM stock WHERE product_id=? AND is_sold=0 AND period=? LIMIT 1", (product_id, period))
     stock = c.fetchone()
     if not stock:
         conn.close()
