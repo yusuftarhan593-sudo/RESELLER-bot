@@ -81,30 +81,44 @@ async def show_products(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("product_"))
 async def show_product_periods(callback: CallbackQuery):
-    user = db.get_user_by_telegram(callback.from_user.id)
     product_id = int(callback.data.split("_")[1])
     product = db.get_product(product_id)
     if not product:
         await callback.answer("Product not found!", show_alert=True)
         return
+    await callback.message.answer(
+        "Choose a key type for " + str(product[2]) + ":",
+        reply_markup=kb.period_select_keyboard(product_id)
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("period_"))
+async def show_period_detail(callback: CallbackQuery):
+    parts = callback.data.split("_")
+    product_id = int(parts[1])
+    period = parts[2]
+    user = db.get_user_by_telegram(callback.from_user.id)
+    product = db.get_product(product_id)
     custom = db.get_custom_prices(user[0], product_id) if user else None
-    price_daily = custom[0] if custom else product[4]
-    price_weekly = custom[1] if custom else product[5]
-    price_monthly = custom[2] if custom else product[6]
-    stock_daily = db.get_stock_count(product_id, "daily")
-    stock_weekly = db.get_stock_count(product_id, "weekly")
-    stock_monthly = db.get_stock_count(product_id, "monthly")
+    if period == "daily":
+        price = custom[0] if custom else product[4]
+        period_text = "1 day"
+    elif period == "weekly":
+        price = custom[1] if custom else product[5]
+        period_text = "7 days"
+    else:
+        price = custom[2] if custom else product[6]
+        period_text = "30 days"
+    stock = db.get_stock_count(product_id, period)
     cat = db.get_category_by_id(product[1])
     cat_name = cat[1] if cat else "-"
     text = (
-        "🔑 Key " + str(product[2]) + ":\n"
+        "🔑 Key " + str(product[2]) + " (" + period_text + "):\n"
         "- Category: " + cat_name + "\n"
-        "- 1 day: " + str(price_daily) + "$\n"
-        "- 7 day: " + str(price_weekly) + "$\n"
-        "- 30 day: " + str(price_monthly) + "$\n"
-        "- Keys in stock: " + str(stock_daily + stock_weekly + stock_monthly)
+        "- Price: " + str(price) + "$\n"
+        "- Keys in stock: " + str(stock)
     )
-    await callback.message.answer(text, reply_markup=kb.period_keyboard(product_id, price_daily, price_weekly, price_monthly, stock_daily, stock_weekly, stock_monthly))
+    await callback.message.answer(text, reply_markup=kb.buy_detail_keyboard(product_id, period))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("getfiles_"))
@@ -114,76 +128,6 @@ async def get_files(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("checkstatus_"))
 async def check_status(callback: CallbackQuery):
     await callback.answer("Status check coming soon!", show_alert=True)
-
-@router.callback_query(F.data.startswith("buy_"))
-async def buy_period_select(callback: CallbackQuery):
-    parts = callback.data.split("_")
-    product_id = int(parts[1])
-    period = parts[2]
-    product = db.get_product(product_id)
-    user = db.get_user_by_telegram(callback.from_user.id)
-    custom = db.get_custom_prices(user[0], product_id) if user else None
-    if period == "daily":
-        price = custom[0] if custom else product[4]
-        period_text = "1 day"
-    elif period == "weekly":
-        price = custom[1] if custom else product[5]
-        period_text = "7 days"
-    else:
-        price = custom[2] if custom else product[6]
-        period_text = "30 days"
-    stock = db.get_stock_count(product_id, period)
-    text = (
-        "🔑 " + str(product[2]) + " (" + period_text + ")\n"
-        "💵 Price: " + str(price) + "$\n"
-        "📦 Keys in stock: " + str(stock)
-    )
-    await callback.message.answer(text, reply_markup=kb.buy_options_keyboard(product_id, period))
-    await callback.answer()
-
-@router.callback_query(F.data.startswith("buymulti_"))
-async def buy_multiple_ask(callback: CallbackQuery, state: FSMContext):
-    parts = callback.data.split("_")
-    product_id = int(parts[1])
-    period = parts[2]
-    await state.update_data(product_id=product_id, period=period)
-    await callback.message.answer("How many keys do you want to buy?")
-    await state.set_state(BuyMultiple.amount)
-    await callback.answer()
-
-@router.message(BuyMultiple.amount)
-async def buy_multiple_confirm(message: Message, state: FSMContext):
-    try:
-        amount = int(message.text)
-    except:
-        await message.answer("Please enter a valid number!")
-        return
-    data = await state.get_data()
-    product_id = data["product_id"]
-    period = data["period"]
-    product = db.get_product(product_id)
-    user = db.get_user_by_telegram(message.from_user.id)
-    custom = db.get_custom_prices(user[0], product_id) if user else None
-    if period == "daily":
-        price = custom[0] if custom else product[4]
-        period_text = "1 day"
-    elif period == "weekly":
-        price = custom[1] if custom else product[5]
-        period_text = "7 days"
-    else:
-        price = custom[2] if custom else product[6]
-        period_text = "30 days"
-    total = round(price * amount, 2)
-    stock = db.get_stock_count(product_id, period)
-    if amount > stock:
-        await message.answer("Not enough stock! Available: " + str(stock))
-        await state.clear()
-        return
-    await message.answer(
-        "Confirm purchase\n\n" + str(product[2]) + " x" + str(amount) + "\n" + period_text + "\nTotal: $" + str(total),
-        reply_markup=kb.confirm_buy_keyboard(product_id, period, amount)
-    )
-    await state.clear()
 
 @router.callback_query(F.data.startswith("confirm_"))
 async def do_buy(callback: CallbackQuery):
@@ -199,7 +143,7 @@ async def do_buy(callback: CallbackQuery):
             await callback.message.answer("Out of stock! Got " + str(len(keys)) + " keys.")
             break
         elif result is False:
-            await callback.message.answer("Insufficient balance! Got " + str(len(keys)) + " keys.")
+            await callback.message.answer("Insufficient balance!")
             break
         else:
             keys.append(result)
@@ -237,22 +181,6 @@ async def back_categories(callback: CallbackQuery):
     categories = db.get_categories()
     await callback.message.answer("Select category:", reply_markup=kb.categories_keyboard(categories))
     await callback.answer()
-
-@router.message(F.text == "📋 Orders")
-async def orders(message: Message):
-    user = db.get_user_by_telegram(message.from_user.id)
-    if not user:
-        await message.answer("Please login first. Type /start")
-        return
-    orders = db.get_user_orders(user[0])
-    if not orders:
-        await message.answer("No orders yet.")
-        return
-    text = "Your Orders\n\n"
-    for o in orders:
-        period_text = {"daily": "1 day", "weekly": "7 days", "monthly": "30 days"}.get(o[6], o[6])
-        text += str(o[3]) + " | " + period_text + " | $" + str(o[5]) + " | " + str(o[7]) + "\n"
-    await message.answer(text)
 
 @router.message(F.text == "🚀 Log out")
 async def logout(message: Message):
