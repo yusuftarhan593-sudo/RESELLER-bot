@@ -2,7 +2,8 @@ import sqlite3
 import hashlib
 from datetime import datetime
 
-DB_NAME = "/app/bot.db"
+DB_NAME = "/app/data/bot.db"
+
 
 def get_conn():
     return sqlite3.connect(DB_NAME)
