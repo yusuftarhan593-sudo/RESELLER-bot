@@ -212,4 +212,320 @@ async def stock_period_select(callback: CallbackQuery, state: FSMContext):
     await state.update_data(period=period)
     period_text = {"daily": "1 Gun", "weekly": "7 Gun", "monthly": "30 Gun"}[period]
     await callback.message.answer("Periyot: " + period_text + "\n\nKey/kodlari girin (her satira bir tane):")
+@router.callback_query(F.data == "admin_add_balance")
+async def cb_add_balance(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+    users = db.get_all_users()
+    if not users:
+        await callback.message.answer("Hic kullanici yok.")
+        await callback.answer()
+        return
+    await callback.message.answer("Bakiye eklenecek kullaniciy secin:", reply_markup=kb.users_list_keyboard(users, "bal"))
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("bal_select_"))
+async def bal_select(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+    user_id = int(callback.data.split("_")[2])
+    await state.update_data(user_id=user_id)
+    await callback.message.answer("Miktar girin (ornek: 50):", reply_markup=kb.cancel_keyboard())
+    await state.set_state(AddBalance.amount)
+    await callback.answer()
+
+@router.message(AddBalance.amount)
+async def add_balance_amount(message: Message, state: FSMContext):
+    if message.text == "Cancel":
+        await state.clear()
+        await message.answer("Iptal edildi.")
+        return
+    data = await state.get_data()
+    db.add_balance(int(data["user_id"]), float(message.text.replace(",", ".")), message.from_user.id)
+    await message.answer("$" + message.text + " eklendi!")
+    await state.clear()
+
+@router.callback_query(F.data.startswith("bal_remove_"))
+async def bal_remove(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+    user_id = int(callback.data.split("_")[2])
+    await state.update_data(user_id=user_id)
+    await callback.message.answer("Dusurulecek miktari girin:", reply_markup=kb.cancel_keyboard())
+    await state.set_state(RemoveBalance.amount)
+    await callback.answer()
+
+@router.message(RemoveBalance.amount)
+async def remove_balance_amount(message: Message, state: FSMContext):
+    if message.text == "Cancel":
+        await state.clear()
+        await message.answer("Iptal edildi.")
+        return
+    data = await state.get_data()
+    db.remove_balance(int(data["user_id"]), float(message.text.replace(",", ".")), message.from_user.id)
+    await message.answer("$" + message.text + " dusuruldu!")
+    await state.clear()
+
+@router.callback_query(F.data == "admin_add_user")
+async def cb_add_user(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+    await callback.message.answer("Yeni kullanici adini girin:", reply_markup=kb.cancel_keyboard())
+    await state.set_state(AddUser.username)
+    await callback.answer()
+
+@router.message(AddUser.username)
+async def add_user_username(message: Message, state: FSMContext):
+    if message.text == "Cancel":
+        await state.clear()
+        await message.answer("Iptal edildi.")
+        return
+    await state.update_data(username=message.text)
+    await message.answer("Sifre girin:")
+    await state.set_state(AddUser.password)
+
+@router.message(AddUser.password)
+async def add_user_password(message: Message, state: FSMContext):
+    data = await state.get_data()
+    success = db.add_user_by_admin(data["username"], message.text)
+    if success:
+        await message.answer("Kullanici olusturuldu!\n\nKullanici adi: " + data["username"] + "\nSifre: " + message.text)
+    else:
+        await message.answer("Bu kullanici adi zaten var!")
+    await state.clear()
+
+@router.callback_query(F.data == "admin_search_user")
+async def cb_search_user(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    users = db.get_all_users()
+    if not users:
+        await callback.message.answer("Hic kullanici yok.")
+        await callback.answer()
+        return
+    await callback.message.answer("Tum Kullanicilar:", reply_markup=kb.users_list_keyboard(users, "detail"))
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("admin_user_"))
+async def user_detail(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    user_id = int(callback.data.split("_")[2])
+    user = db.get_user_by_id(user_id)
+    if not user:
+        await callback.answer("Kullanici bulunamadi!", show_alert=True)
+        return
+    text = "Kullanici Detayi\n\nID: " + str(user[0]) + "\nKullanici adi: " + str(user[1]) + "\nBakiye: " + str(user[3]) + "$\nKayit: " + str(user[7])
+    await callback.message.answer(text, reply_markup=kb.user_detail_keyboard(user_id))
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("delete_user_"))
+async def delete_user(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    user_id = int(callback.data.split("_")[2])
+    db.delete_user(user_id)
+    await callback.message.answer("Kullanici silindi!")
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("change_pass_"))
+async def change_pass(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+    user_id = int(callback.data.split("_")[2])
+    await state.update_data(user_id=user_id)
+    await callback.message.answer("Yeni sifre girin:", reply_markup=kb.cancel_keyboard())
+    await state.set_state(ChangePassword.password)
+    await callback.answer()
+
+@router.message(ChangePassword.password)
+async def save_new_password(message: Message, state: FSMContext):
+    if message.text == "Cancel":
+        await state.clear()
+        await message.answer("Iptal edildi.")
+        return
+    data = await state.get_data()
+    db.change_user_password(data["user_id"], message.text)
+    await message.answer("Sifre degistirildi: " + message.text)
+    await state.clear()
+
+@router.callback_query(F.data.startswith("delete_product_"))
+async def delete_product(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    product_id = int(callback.data.split("_")[2])
+    db.delete_product(product_id)
+    await callback.message.answer("Urun silindi!")
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("edit_product_"))
+async def edit_product_start(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+    product_id = int(callback.data.split("_")[2])
+    product = db.get_product(product_id)
+    await state.update_data(product_id=product_id)
+    await callback.message.answer(
+        "Urun: " + str(product[2]) + "\nMevcut fiyatlar:\n- Gunluk: " + str(product[4]) + "$\n- Haftalik: " + str(product[5]) + "$\n- Aylik: " + str(product[6]) + "$\n\nYeni gunluk satis fiyati girin:",
+        reply_markup=kb.cancel_keyboard()
+    )
+    await state.set_state(EditProduct.price_daily)
+    await callback.answer()
+
+@router.message(EditProduct.price_daily)
+async def edit_price_daily(message: Message, state: FSMContext):
+    if message.text == "Cancel":
+        await state.clear()
+        await message.answer("Iptal edildi.")
+        return
+    await state.update_data(price_daily=message.text.replace(",", "."))
+    await message.answer("Yeni haftalik satis fiyati girin:")
+    await state.set_state(EditProduct.price_weekly)
+
+@router.message(EditProduct.price_weekly)
+async def edit_price_weekly(message: Message, state: FSMContext):
+    await state.update_data(price_weekly=message.text.replace(",", "."))
+    await message.answer("Yeni aylik satis fiyati girin:")
+    await state.set_state(EditProduct.price_monthly)
+
+@router.message(EditProduct.price_monthly)
+async def edit_price_monthly(message: Message, state: FSMContext):
+    await state.update_data(price_monthly=message.text.replace(",", "."))
+    await message.answer("Yeni gunluk MALIYET girin:")
+    await state.set_state(EditProduct.cost_daily)
+
+@router.message(EditProduct.cost_daily)
+async def edit_cost_daily(message: Message, state: FSMContext):
+    await state.update_data(cost_daily=message.text.replace(",", "."))
+    await message.answer("Yeni haftalik MALIYET girin:")
+    await state.set_state(EditProduct.cost_weekly)
+
+@router.message(EditProduct.cost_weekly)
+async def edit_cost_weekly(message: Message, state: FSMContext):
+    await state.update_data(cost_weekly=message.text.replace(",", "."))
+    await message.answer("Yeni aylik MALIYET girin:")
+    await state.set_state(EditProduct.cost_monthly)
+
+@router.message(EditProduct.cost_monthly)
+async def edit_cost_monthly(message: Message, state: FSMContext):
+    data = await state.get_data()
+    try:
+        db.update_product_prices(
+            data["product_id"],
+            float(data["price_daily"]), float(data["price_weekly"]), float(data["price_monthly"]),
+            float(data["cost_daily"]), float(data["cost_weekly"]), float(message.text.replace(",", "."))
+        )
+        await message.answer("Urun guncellendi!")
+    except Exception as e:
+        await message.answer("Hata: " + str(e))
+    await state.clear()
+
+@router.callback_query(F.data.startswith("order_history_"))
+async def order_history(callback: CallbackQuery):
+    user_id = int(callback.data.split("_")[2])
+    orders = db.get_user_orders(user_id)
+    if not orders:
+        await callback.message.answer("Satin alim gecmisi yok.")
+        await callback.answer()
+        return
+    text = "Satin Alim Gecmisi\n\n"
+    for o in orders:
+        period_text = {"daily": "1 day", "weekly": "7 days", "monthly": "30 days"}.get(o[6], "-")
+        text += str(o[3]) + " | " + period_text + " | $" + str(o[5]) + " | " + str(o[7]) + "\n"
+    await callback.message.answer(text)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("custom_price_"))
+async def custom_price_select(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    user_id = int(callback.data.split("_")[2])
+    products = db.get_products()
+    if not products:
+        await callback.message.answer("Hic urun yok!")
+        await callback.answer()
+        return
+    await callback.message.answer("Urun secin:", reply_markup=kb.custom_price_products_keyboard(products, user_id))
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("set_custom_"))
+async def set_custom_price(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+    parts = callback.data.split("_")
+    user_id = int(parts[2])
+    product_id = int(parts[3])
+    await state.update_data(user_id=user_id, product_id=product_id)
+    await callback.message.answer("Gunluk ozel fiyat girin:", reply_markup=kb.cancel_keyboard())
+    await state.set_state(CustomPrice.price_daily)
+    await callback.answer()
+
+@router.message(CustomPrice.price_daily)
+async def save_custom_price_daily(message: Message, state: FSMContext):
+    if message.text == "Cancel":
+        await state.clear()
+        await message.answer("Iptal edildi.")
+        return
+    await state.update_data(price_daily=message.text.replace(",", "."))
+    await message.answer("Haftalik ozel fiyat girin:")
+    await state.set_state(CustomPrice.price_weekly)
+
+@router.message(CustomPrice.price_weekly)
+async def save_custom_price_weekly(message: Message, state: FSMContext):
+    await state.update_data(price_weekly=message.text.replace(",", "."))
+    await message.answer("Aylik ozel fiyat girin:")
+    await state.set_state(CustomPrice.price_monthly)
+
+@router.message(CustomPrice.price_monthly)
+async def save_custom_price_monthly(message: Message, state: FSMContext):
+    data = await state.get_data()
+    try:
+        db.set_custom_prices(
+            data["user_id"], data["product_id"],
+            float(data["price_daily"]),
+            float(data["price_weekly"]),
+            float(message.text.replace(",", "."))
+        )
+        await message.answer("Ozel fiyatlar ayarlandi!")
+    except Exception as e:
+        await message.answer("Hata: " + str(e))
+    await state.clear()
+
+@router.callback_query(F.data == "admin_stats")
+async def admin_stats(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    await callback.message.answer("Istatistikler - Periyot secin:", reply_markup=kb.stats_keyboard())
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("stats_"))
+async def show_stats(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    period = callback.data.split("_")[1]
+    stats = db.get_stats(period)
+    period_text = {"daily": "Gunluk", "weekly": "Haftalik", "monthly": "Aylik"}[period]
+    text = (period_text + " Istatistikler\n\n"
+            + "Toplam Satis: " + str(stats["total_orders"]) + " adet\n"
+            + "Toplam Gelir: $" + str(stats["total_revenue"]) + "\n"
+            + "Toplam Maliyet: $" + str(stats["total_cost"]) + "\n"
+            + "Net Kar: $" + str(stats["net_profit"]))
+    await callback.message.answer(text)
+    await callback.answer()
+
+@router.callback_query(F.data == "admin_all_orders")
+async def admin_all_orders(callback: CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        return
+    orders = db.get_all_orders()
+    if not orders:
+        await callback.message.answer("Hic siparis yok.")
+        await callback.answer()
+        return
+    text = "Tum Siparisler\n\n"
+    for o in orders:
+        period_text = {"daily": "1 day", "weekly": "7 days", "monthly": "30 days"}.get(o[6], "-")
+        text += str(o[1]) + " | " + str(o[3]) + " | " + period_text + " | $" + str(o[5]) + " | " + str(o[7]) + "\n"
+    await callback.message.answer(text)
+    await callback.answer()
 
