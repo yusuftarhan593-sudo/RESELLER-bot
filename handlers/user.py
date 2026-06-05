@@ -13,11 +13,6 @@ class LoginState(StatesGroup):
     username = State()
     password = State()
 
-class BuyMultiple(StatesGroup):
-    product_id = State()
-    period = State()
-    amount = State()
-
 @router.message(Command("start"))
 async def start(message: Message, state: FSMContext):
     user = db.get_user_by_telegram(message.from_user.id)
@@ -67,6 +62,18 @@ async def buy_keys(message: Message):
         return
     await message.answer("Select category:", reply_markup=kb.categories_keyboard(categories))
 
+@router.callback_query(F.data == "back_main")
+async def back_main(callback: CallbackQuery):
+    categories = db.get_categories()
+    await callback.message.answer("Select category:", reply_markup=kb.categories_keyboard(categories))
+    await callback.answer()
+
+@router.callback_query(F.data == "back_categories")
+async def back_categories(callback: CallbackQuery):
+    categories = db.get_categories()
+    await callback.message.answer("Select category:", reply_markup=kb.categories_keyboard(categories))
+    await callback.answer()
+
 @router.callback_query(F.data.startswith("cat_"))
 async def show_products(callback: CallbackQuery):
     category_id = int(callback.data.split("_")[1])
@@ -75,7 +82,6 @@ async def show_products(callback: CallbackQuery):
         await callback.message.answer("No products in this category.")
         await callback.answer()
         return
-    await callback.message.edit_reply_markup(reply_markup=None)
     await callback.message.answer("Select product:", reply_markup=kb.products_keyboard(products, category_id))
     await callback.answer()
 
@@ -91,6 +97,15 @@ async def show_product_periods(callback: CallbackQuery):
         reply_markup=kb.period_select_keyboard(product_id)
     )
     await callback.answer()
+
+@router.callback_query(F.data.startswith("getfiles_"))
+async def get_files(callback: CallbackQuery):
+    await callback.message.answer("📁 Get files from our channel: @hilehanemfiles")
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("checkstatus_"))
+async def check_status(callback: CallbackQuery):
+    await callback.answer("Status check coming soon!", show_alert=True)
 
 @router.callback_query(F.data.startswith("period_"))
 async def show_period_detail(callback: CallbackQuery):
@@ -121,14 +136,6 @@ async def show_period_detail(callback: CallbackQuery):
     await callback.message.answer(text, reply_markup=kb.buy_detail_keyboard(product_id, period))
     await callback.answer()
 
-@router.callback_query(F.data.startswith("getfiles_"))
-async def get_files(callback: CallbackQuery):
-    await callback.answer("Files feature coming soon!", show_alert=True)
-
-@router.callback_query(F.data.startswith("checkstatus_"))
-async def check_status(callback: CallbackQuery):
-    await callback.answer("Status check coming soon!", show_alert=True)
-
 @router.callback_query(F.data.startswith("confirm_"))
 async def do_buy(callback: CallbackQuery):
     user = db.get_user_by_telegram(callback.from_user.id)
@@ -140,7 +147,7 @@ async def do_buy(callback: CallbackQuery):
     for i in range(amount):
         result = db.buy_product(user[0], product_id, period)
         if result is None:
-            await callback.message.answer("Out of stock! Got " + str(len(keys)) + " keys.")
+            await callback.message.answer("Out of stock!")
             break
         elif result is False:
             await callback.message.answer("Insufficient balance!")
@@ -148,10 +155,12 @@ async def do_buy(callback: CallbackQuery):
         else:
             keys.append(result)
     if keys:
-        text = "Purchase successful!\n\n"
-        for i, key in enumerate(keys):
-            text += "🔑 Key " + str(i+1) + ": " + str(key) + "\n"
-        await callback.message.answer(text)
+        product = db.get_product(product_id)
+        period_text = {"daily": "1 day", "weekly": "7 days", "monthly": "30 days"}.get(period, period)
+        text = "🔑 Your key " + str(product[2]) + " (" + period_text + ") :\n"
+        for key in keys:
+            text += "`" + str(key) + "`\n"
+        await callback.message.answer(text, parse_mode="Markdown")
     await callback.answer()
 
 @router.callback_query(F.data.startswith("order_history_"))
@@ -174,12 +183,6 @@ async def order_history_user(callback: CallbackQuery):
         period_text = {"daily": "1 day", "weekly": "7 days", "monthly": "30 days"}.get(o[6], o[6])
         text += str(o[3]) + " | " + period_text + " | $" + str(o[5]) + " | " + str(o[7]) + "\n"
     await callback.message.answer(text)
-    await callback.answer()
-
-@router.callback_query(F.data == "back_categories")
-async def back_categories(callback: CallbackQuery):
-    categories = db.get_categories()
-    await callback.message.answer("Select category:", reply_markup=kb.categories_keyboard(categories))
     await callback.answer()
 
 @router.message(F.text == "🚀 Log out")
