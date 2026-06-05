@@ -166,6 +166,20 @@ def add_category(name, emoji=""):
     conn.commit()
     conn.close()
 
+def delete_category(category_id):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("UPDATE categories SET is_active=0 WHERE id=?", (category_id,))
+    conn.commit()
+    conn.close()
+
+def update_category(category_id, name, emoji):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("UPDATE categories SET name=?, emoji=? WHERE id=?", (name, emoji, category_id))
+    conn.commit()
+    conn.close()
+
 def get_products(category_id=None):
     conn = get_conn()
     c = conn.cursor()
