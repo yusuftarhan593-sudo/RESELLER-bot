@@ -211,4 +211,5 @@ async def stock_period_select(callback: CallbackQuery, state: FSMContext):
     period = callback.data.split("_")[2]
     await state.update_data(period=period)
     period_text = {"daily": "1 Gun", "weekly": "7 Gun", "monthly": "30 Gun"}[period]
-    await callback.message.answer("Periyot: " + period_text + "\
+    await callback.message.answer("Periyot: " + period_text + "\n\nKey/kodlari girin (her satira bir tane):")
+
