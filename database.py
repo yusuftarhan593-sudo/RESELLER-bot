@@ -67,6 +67,20 @@ def add_user_by_admin(username, password):
     conn.close()
     return True
 
+def delete_user(user_id):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("DELETE FROM users WHERE id=?", (user_id,))
+    conn.commit()
+    conn.close()
+
+def change_user_password(user_id, new_password):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("UPDATE users SET password=? WHERE id=?", (hash_password(new_password), user_id))
+    conn.commit()
+    conn.close()
+
 def login_user(username, password, telegram_id):
     conn = get_conn()
     c = conn.cursor()
@@ -120,6 +134,15 @@ def add_balance(user_id, amount, added_by, note="Manual top-up"):
     conn.commit()
     conn.close()
 
+def remove_balance(user_id, amount, added_by, note="Manuel dusurme"):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("UPDATE users SET balance = balance - ? WHERE id=?", (amount, user_id))
+    c.execute("INSERT INTO balance_logs (user_id, amount, note, added_by) VALUES (?, ?, ?, ?)",
+              (user_id, -amount, note, added_by))
+    conn.commit()
+    conn.close()
+
 def get_categories():
     conn = get_conn()
     c = conn.cursor()
@@ -161,6 +184,22 @@ def get_product(product_id):
     product = c.fetchone()
     conn.close()
     return product
+
+def delete_product(product_id):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("UPDATE products SET is_active=0 WHERE id=?", (product_id,))
+    conn.commit()
+    conn.close()
+
+def update_product_prices(product_id, price_daily, price_weekly, price_monthly, cost_daily, cost_weekly, cost_monthly):
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""UPDATE products SET price_daily=?, price_weekly=?, price_monthly=?,
+        cost_daily=?, cost_weekly=?, cost_monthly=? WHERE id=?""",
+              (price_daily, price_weekly, price_monthly, cost_daily, cost_weekly, cost_monthly, product_id))
+    conn.commit()
+    conn.close()
 
 def add_product(category_id, name, description, price_daily, price_weekly, price_monthly, cost_daily, cost_weekly, cost_monthly):
     conn = get_conn()
