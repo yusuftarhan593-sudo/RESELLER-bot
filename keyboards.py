@@ -62,9 +62,12 @@ def admin_inline_menu():
 
 def user_detail_keyboard(user_id):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="💵 Bakiye Ekle", callback_data="bal_add_" + str(user_id)),
-         InlineKeyboardButton(text="💲 Ozel Fiyat", callback_data="custom_price_" + str(user_id))],
+        [InlineKeyboardButton(text="💵 Bakiye Ekle", callback_data="bal_select_" + str(user_id)),
+         InlineKeyboardButton(text="💸 Bakiye Dus", callback_data="bal_remove_" + str(user_id))],
+        [InlineKeyboardButton(text="💲 Ozel Fiyat", callback_data="custom_price_" + str(user_id)),
+         InlineKeyboardButton(text="🔑 Sifre Degistir", callback_data="change_pass_" + str(user_id))],
         [InlineKeyboardButton(text="📋 Satin Alim Gecmisi", callback_data="order_history_" + str(user_id))],
+        [InlineKeyboardButton(text="🗑 Kullanici Sil", callback_data="delete_user_" + str(user_id))],
         [InlineKeyboardButton(text="🔙 Geri", callback_data="admin_search_user")]
     ])
 
@@ -73,12 +76,23 @@ def users_list_keyboard(users, prefix="detail"):
     for u in users:
         if prefix == "bal":
             cb = "bal_select_" + str(u[0])
+        elif prefix == "bal_remove":
+            cb = "bal_remove_" + str(u[0])
         else:
             cb = "admin_user_" + str(u[0])
         buttons.append([InlineKeyboardButton(
             text="👤 " + str(u[1]) + " | 💰 " + str(u[3]) + "$",
             callback_data=cb
         )])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def products_manage_keyboard(products):
+    buttons = []
+    for p in products:
+        buttons.append([
+            InlineKeyboardButton(text=str(p[2]), callback_data="edit_product_" + str(p[0])),
+            InlineKeyboardButton(text="🗑 Sil", callback_data="delete_product_" + str(p[0]))
+        ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def custom_price_products_keyboard(products, user_id):
