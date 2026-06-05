@@ -38,8 +38,8 @@ def buy_detail_keyboard(product_id, period):
 
 def confirm_buy_keyboard(product_id, period, amount):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Confirm", callback_data="confirm_" + str(product_id) + "_" + str(period) + "_" + str(amount)),
-         InlineKeyboardButton(text="❌ Cancel", callback_data="back_categories")]
+        [InlineKeyboardButton(text="Confirm", callback_data="confirm_" + str(product_id) + "_" + str(period) + "_" + str(amount)),
+         InlineKeyboardButton(text="Cancel", callback_data="back_categories")]
     ])
 
 def balance_menu_keyboard(user_id):
@@ -57,7 +57,9 @@ def admin_inline_menu():
         [InlineKeyboardButton(text="👥 Kullanici Ekle", callback_data="admin_add_user"),
          InlineKeyboardButton(text="🔍 Kullanicilar", callback_data="admin_search_user")],
         [InlineKeyboardButton(text="📊 Istatistikler", callback_data="admin_stats"),
-         InlineKeyboardButton(text="📋 Tum Siparisler", callback_data="admin_all_orders")]
+         InlineKeyboardButton(text="📋 Tum Siparisler", callback_data="admin_all_orders")],
+        [InlineKeyboardButton(text="📂 Kategori Yonet", callback_data="admin_manage_categories"),
+         InlineKeyboardButton(text="📦 Urun Yonet", callback_data="admin_manage_products")]
     ])
 
 def user_detail_keyboard(user_id):
@@ -86,13 +88,26 @@ def users_list_keyboard(users, prefix="detail"):
         )])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
+def categories_manage_keyboard(categories):
+    buttons = []
+    for cat in categories:
+        buttons.append([
+            InlineKeyboardButton(text=str(cat[2]) + " " + str(cat[1]), callback_data="admin_cat_detail_" + str(cat[0])),
+            InlineKeyboardButton(text="✏️ Duzenle", callback_data="edit_cat_" + str(cat[0])),
+            InlineKeyboardButton(text="🗑 Sil", callback_data="delete_cat_" + str(cat[0]))
+        ])
+    buttons.append([InlineKeyboardButton(text="🔙 Geri", callback_data="back_admin")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
 def products_manage_keyboard(products):
     buttons = []
     for p in products:
         buttons.append([
-            InlineKeyboardButton(text=str(p[2]), callback_data="edit_product_" + str(p[0])),
+            InlineKeyboardButton(text=str(p[2]), callback_data="admin_prod_detail_" + str(p[0])),
+            InlineKeyboardButton(text="✏️ Duzenle", callback_data="edit_product_" + str(p[0])),
             InlineKeyboardButton(text="🗑 Sil", callback_data="delete_product_" + str(p[0]))
         ])
+    buttons.append([InlineKeyboardButton(text="🔙 Geri", callback_data="back_admin")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def custom_price_products_keyboard(products, user_id):
@@ -102,7 +117,7 @@ def custom_price_products_keyboard(products, user_id):
             text=str(p[2]),
             callback_data="set_custom_" + str(user_id) + "_" + str(p[0])
         )])
-    buttons.append([InlineKeyboardButton(text="🔙 Geri", callback_data="user_detail_" + str(user_id))])
+    buttons.append([InlineKeyboardButton(text="🔙 Geri", callback_data="admin_search_user")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def stats_keyboard():
