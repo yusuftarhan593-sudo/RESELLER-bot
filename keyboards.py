@@ -32,8 +32,8 @@ def period_select_keyboard(product_id):
 
 def buy_options_keyboard(product_id, period):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔑 Buy one", callback_data="buyone_" + str(product_id) + "_" + str(period))],
-        [InlineKeyboardButton(text="🔑 Buy multiple", callback_data="buymulti_" + str(product_id) + "_" + str(period))],
+        [InlineKeyboardButton(text="Buy one", callback_data="buyone_" + str(product_id) + "_" + str(period)),
+         InlineKeyboardButton(text="Buy multiple", callback_data="buymulti_" + str(product_id) + "_" + str(period))],
         [InlineKeyboardButton(text="🔙 Go back", callback_data="back_categories")]
     ])
 
@@ -125,7 +125,8 @@ def stats_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📅 Gunluk", callback_data="stats_daily"),
          InlineKeyboardButton(text="📅 Haftalik", callback_data="stats_weekly")],
-        [InlineKeyboardButton(text="📅 Aylik", callback_data="stats_monthly")]
+        [InlineKeyboardButton(text="📅 Aylik", callback_data="stats_monthly")],
+        [InlineKeyboardButton(text="🗑 Sifirla", callback_data="stats_reset")]
     ])
 
 def cancel_keyboard():
