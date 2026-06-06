@@ -55,7 +55,7 @@ async def account(message: Message):
         reply_markup=kb.balance_menu_keyboard(user[0])
     )
 
-@router.message(F.text == "🛍 Buy keys")
+@router.message(F.text == "🛍️ Buy keys")
 async def buy_keys(message: Message):
     user = db.get_user_by_telegram(message.from_user.id)
     if not user:
@@ -256,28 +256,6 @@ async def do_buy(callback: CallbackQuery):
         for key in keys:
             text += "`" + str(key) + "`\n"
         await callback.message.answer(text, parse_mode="Markdown")
-    await callback.answer()
-
-@router.callback_query(F.data.startswith("order_history_"))
-async def order_history_user(callback: CallbackQuery):
-    user = db.get_user_by_telegram(callback.from_user.id)
-    if not user:
-        await callback.answer("Unauthorized!", show_alert=True)
-        return
-    user_id = int(callback.data.split("_")[2])
-    if user[0] != user_id:
-        await callback.answer("Unauthorized!", show_alert=True)
-        return
-    orders = db.get_user_orders(user_id)
-    if not orders:
-        await callback.message.answer("No purchases yet.")
-        await callback.answer()
-        return
-    text = "Purchase History\n\n"
-    for o in orders:
-        period_text = {"daily": "1 day", "weekly": "7 days", "monthly": "30 days"}.get(o[6], o[6])
-        text += str(o[3]) + " | " + period_text + " | $" + str(o[5]) + " | " + str(o[7]) + "\n"
-    await callback.message.answer(text)
     await callback.answer()
 
 @router.message(F.text == "🚀 Log out")
