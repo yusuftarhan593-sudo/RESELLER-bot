@@ -30,16 +30,17 @@ def period_select_keyboard(product_id):
         [InlineKeyboardButton(text="🔙 Go back", callback_data="back_categories")]
     ])
 
-def buy_detail_keyboard(product_id, period):
+def buy_options_keyboard(product_id, period):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔑 Buy", callback_data="confirm_" + str(product_id) + "_" + str(period) + "_1")],
+        [InlineKeyboardButton(text="🔑 Buy one", callback_data="buyone_" + str(product_id) + "_" + str(period))],
+        [InlineKeyboardButton(text="🔑 Buy multiple", callback_data="buymulti_" + str(product_id) + "_" + str(period))],
         [InlineKeyboardButton(text="🔙 Go back", callback_data="back_categories")]
     ])
 
 def confirm_buy_keyboard(product_id, period, amount):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Confirm", callback_data="confirm_" + str(product_id) + "_" + str(period) + "_" + str(amount)),
-         InlineKeyboardButton(text="Cancel", callback_data="back_categories")]
+        [InlineKeyboardButton(text="✅ Confirm", callback_data="confirm_" + str(product_id) + "_" + str(period) + "_" + str(amount)),
+         InlineKeyboardButton(text="❌ Cancel", callback_data="back_categories")]
     ])
 
 def balance_menu_keyboard(user_id):
@@ -93,8 +94,8 @@ def categories_manage_keyboard(categories):
     for cat in categories:
         buttons.append([
             InlineKeyboardButton(text=str(cat[2]) + " " + str(cat[1]), callback_data="admin_cat_detail_" + str(cat[0])),
-            InlineKeyboardButton(text="✏️ Duzenle", callback_data="edit_cat_" + str(cat[0])),
-            InlineKeyboardButton(text="🗑 Sil", callback_data="delete_cat_" + str(cat[0]))
+            InlineKeyboardButton(text="✏️", callback_data="edit_cat_" + str(cat[0])),
+            InlineKeyboardButton(text="🗑", callback_data="delete_cat_" + str(cat[0]))
         ])
     buttons.append([InlineKeyboardButton(text="🔙 Geri", callback_data="back_admin")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -104,8 +105,8 @@ def products_manage_keyboard(products):
     for p in products:
         buttons.append([
             InlineKeyboardButton(text=str(p[2]), callback_data="admin_prod_detail_" + str(p[0])),
-            InlineKeyboardButton(text="✏️ Duzenle", callback_data="edit_product_" + str(p[0])),
-            InlineKeyboardButton(text="🗑 Sil", callback_data="delete_product_" + str(p[0]))
+            InlineKeyboardButton(text="✏️", callback_data="edit_product_" + str(p[0])),
+            InlineKeyboardButton(text="🗑", callback_data="delete_product_" + str(p[0]))
         ])
     buttons.append([InlineKeyboardButton(text="🔙 Geri", callback_data="back_admin")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
