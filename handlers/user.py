@@ -60,12 +60,15 @@ async def buy_keys(message: Message):
     if not categories:
         await message.answer("No products available.")
         return
-    await message.answer("🗂 Select a category:", reply_markup=kb.categories_keyboard(categories))
+    await message.answer("Select a category:", reply_markup=kb.categories_keyboard(categories))
 
 @router.callback_query(F.data == "back_main")
 async def back_main(callback: CallbackQuery):
     categories = db.get_categories()
-    await callback.message.edit_text("🗂 Select a category:", reply_markup=kb.categories_keyboard(categories))
+    try:
+        await callback.message.edit_text("Select a category:", reply_markup=kb.categories_keyboard(categories))
+    except:
+        await callback.message.answer("Select a category:", reply_markup=kb.categories_keyboard(categories))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("cat_"))
@@ -75,7 +78,10 @@ async def show_products(callback: CallbackQuery):
     if not products:
         await callback.answer("No products in this category.", show_alert=True)
         return
-    await callback.message.edit_text("📦 Select a product:", reply_markup=kb.products_keyboard(products, category_id))
+    try:
+        await callback.message.edit_text("Select a product:", reply_markup=kb.products_keyboard(products, category_id))
+    except:
+        await callback.message.answer("Select a product:", reply_markup=kb.products_keyboard(products, category_id))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("product_"))
@@ -90,11 +96,16 @@ async def show_product_detail(callback: CallbackQuery):
     price_daily = custom[0] if custom else product[4]
     price_weekly = custom[1] if custom else product[5]
     price_monthly = custom[2] if custom else product[6]
-    await callback.message.edit_text(
-"🗒 Choose a key type for " + str(product[2]) + ":"
-
-        reply_markup=kb.period_select_keyboard(product_id, price_daily, price_weekly, price_monthly)
-    )
+    try:
+        await callback.message.edit_text(
+            "🗒 Choose a key type for " + str(product[2]) + ":",
+            reply_markup=kb.period_select_keyboard(product_id, price_daily, price_weekly, price_monthly)
+        )
+    except:
+        await callback.message.answer(
+            "🗒 Choose a key type for " + str(product[2]) + ":",
+            reply_markup=kb.period_select_keyboard(product_id, price_daily, price_weekly, price_monthly)
+        )
     await callback.answer()
 
 @router.callback_query(F.data.startswith("getfiles_"))
@@ -129,7 +140,10 @@ async def show_period_detail(callback: CallbackQuery):
         "💰 Price: $" + str(price) + "\n"
         "📦 Stock: " + str(stock) + " keys"
     )
-    await callback.message.edit_text(text, reply_markup=kb.buy_keyboard(product_id, period))
+    try:
+        await callback.message.edit_text(text, reply_markup=kb.buy_keyboard(product_id, period))
+    except:
+        await callback.message.answer(text, reply_markup=kb.buy_keyboard(product_id, period))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("buyone_"))
@@ -155,7 +169,10 @@ async def buy_one(callback: CallbackQuery):
         "⏱ " + period_text + "\n"
         "💰 Total: $" + str(price)
     )
-    await callback.message.edit_text(text, reply_markup=kb.confirm_buy_keyboard(product_id, period, 1))
+    try:
+        await callback.message.edit_text(text, reply_markup=kb.confirm_buy_keyboard(product_id, period, 1))
+    except:
+        await callback.message.answer(text, reply_markup=kb.confirm_buy_keyboard(product_id, period, 1))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("confirm_"))
