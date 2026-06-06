@@ -90,24 +90,20 @@ async def show_product_detail(callback: CallbackQuery):
     price_daily = custom[0] if custom else product[4]
     price_weekly = custom[1] if custom else product[5]
     price_monthly = custom[2] if custom else product[6]
-    stock_daily = db.get_stock_count(product_id, "daily")
-    stock_weekly = db.get_stock_count(product_id, "weekly")
-    stock_monthly = db.get_stock_count(product_id, "monthly")
-    cat = db.get_category_by_id(product[1])
-    cat_name = cat[1] if cat else "-"
-    text = (
-        "🔑 " + str(product[2]) + "\n"
-        "━━━━━━━━━━━━━━━\n"
-        "📂 Category: " + cat_name + "\n\n"
-        "💰 Prices:\n"
-        "  • 1 day  — $" + str(price_daily) + "  [" + str(stock_daily) + " in stock]\n"
-        "  • 7 days — $" + str(price_weekly) + "  [" + str(stock_weekly) + " in stock]\n"
-        "  • 30 days — $" + str(price_monthly) + "  [" + str(stock_monthly) + " in stock]\n"
-        "━━━━━━━━━━━━━━━\n"
-        "⬇️ Select duration:"
+    await callback.message.edit_text(
+        "🗂 Choose a key type for " + str(product[2]) + ":",
+        reply_markup=kb.period_select_keyboard(product_id, price_daily, price_weekly, price_monthly)
     )
-    await callback.message.edit_text(text, reply_markup=kb.period_select_keyboard(product_id))
     await callback.answer()
+
+@router.callback_query(F.data.startswith("getfiles_"))
+async def get_files(callback: CallbackQuery):
+    await callback.message.answer("Get files from our channel: @hilehanemfiles")
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("checkstatus_"))
+async def check_status(callback: CallbackQuery):
+    await callback.answer("Status check coming soon!", show_alert=True)
 
 @router.callback_query(F.data.startswith("period_"))
 async def show_period_detail(callback: CallbackQuery):
@@ -127,15 +123,10 @@ async def show_period_detail(callback: CallbackQuery):
         price = custom[2] if custom else product[6]
         period_text = "30 days"
     stock = db.get_stock_count(product_id, period)
-    cat = db.get_category_by_id(product[1])
-    cat_name = cat[1] if cat else "-"
     text = (
-        "🔑 " + str(product[2]) + " — " + period_text + "\n"
-        "━━━━━━━━━━━━━━━\n"
-        "📂 Category: " + cat_name + "\n"
+        "🔑 " + str(product[2]) + " (" + period_text + ")\n"
         "💰 Price: $" + str(price) + "\n"
-        "📦 Stock: " + str(stock) + " keys\n"
-        "━━━━━━━━━━━━━━━"
+        "📦 Stock: " + str(stock) + " keys"
     )
     await callback.message.edit_text(text, reply_markup=kb.buy_keyboard(product_id, period))
     await callback.answer()
@@ -158,12 +149,10 @@ async def buy_one(callback: CallbackQuery):
         price = custom[2] if custom else product[6]
         period_text = "30 days"
     text = (
-        "🛒 Confirm Purchase\n"
-        "━━━━━━━━━━━━━━━\n"
+        "🛒 Confirm Purchase\n\n"
         "🔑 " + str(product[2]) + " x1\n"
         "⏱ " + period_text + "\n"
-        "💰 Total: $" + str(price) + "\n"
-        "━━━━━━━━━━━━━━━"
+        "💰 Total: $" + str(price)
     )
     await callback.message.edit_text(text, reply_markup=kb.confirm_buy_keyboard(product_id, period, 1))
     await callback.answer()
@@ -189,7 +178,7 @@ async def do_buy(callback: CallbackQuery):
     if keys:
         product = db.get_product(product_id)
         period_text = {"daily": "1 day", "weekly": "7 days", "monthly": "30 days"}.get(period, period)
-        text = "✅ Purchase Successful!\n━━━━━━━━━━━━━━━\n🔑 " + str(product[2]) + " (" + period_text + ")\n\n"
+        text = "✅ Purchase Successful!\n\n🔑 " + str(product[2]) + " (" + period_text + ")\n\n"
         for key in keys:
             text += "`" + str(key) + "`\n"
         await callback.message.edit_text(text, parse_mode="Markdown")
@@ -210,7 +199,7 @@ async def order_history_user(callback: CallbackQuery):
         await callback.message.answer("📋 No purchases yet.")
         await callback.answer()
         return
-    text = "📋 Purchase History\n━━━━━━━━━━━━━━━\n\n"
+    text = "📋 Purchase History\n\n"
     for o in orders:
         period_text = {"daily": "1 day", "weekly": "7 days", "monthly": "30 days"}.get(o[6], o[6])
         text += "🔑 " + str(o[3]) + " | " + period_text + " | $" + str(o[5]) + "\n📅 " + str(o[7]) + "\n\n"
