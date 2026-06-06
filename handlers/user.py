@@ -55,7 +55,7 @@ async def account(message: Message):
         reply_markup=kb.balance_menu_keyboard(user[0])
     )
 
-@router.message(F.text == "🛍️ Buy keys")
+@router.message(F.text == "🛍 Buy keys")
 async def buy_keys(message: Message):
     user = db.get_user_by_telegram(message.from_user.id)
     if not user:
