@@ -91,7 +91,8 @@ async def show_product_detail(callback: CallbackQuery):
     price_weekly = custom[1] if custom else product[5]
     price_monthly = custom[2] if custom else product[6]
     await callback.message.edit_text(
-        "🗂 Choose a key type for " + str(product[2]) + ":",
+"🗒 Choose a key type for " + str(product[2]) + ":"
+
         reply_markup=kb.period_select_keyboard(product_id, price_daily, price_weekly, price_monthly)
     )
     await callback.answer()
