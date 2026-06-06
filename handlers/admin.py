@@ -352,7 +352,7 @@ async def add_stock_product(message: Message, state: FSMContext):
 
 @router.callback_query(F.data.startswith("stock_period_"))
 async def stock_period_select(callback: CallbackQuery, state: FSMContext):
-    period = callback.data.split("_")[2]
+    period = callback.data.replace("stock_period_", "")
     await state.update_data(period=period)
     period_text = {"daily": "1 Gun", "weekly": "7 Gun", "monthly": "30 Gun"}[period]
     await callback.message.answer("Periyot: " + period_text + "\n\nKey/kodlari girin (her satira bir tane):")
@@ -365,7 +365,7 @@ async def add_stock_keys(message: Message, state: FSMContext):
     keys = message.text.strip().split("\n")
     for key in keys:
         db.add_stock_with_period(int(data["product_id"]), key.strip(), data["period"])
-    await message.answer(str(len(keys)) + " adet stok eklendi!")
+    await message.answer(str(len(keys)) + " adet stok eklendi! Periyot: " + data["period"])
     await state.clear()
 
 @router.callback_query(F.data == "admin_add_balance")
@@ -576,43 +576,6 @@ async def save_custom_price_monthly(message: Message, state: FSMContext):
         await message.answer("Hata: " + str(e))
     await state.clear()
 
-@router.callback_query(F.data == "admin_stats")
-async def admin_stats(callback: CallbackQuery):
-    if not is_admin(callback.from_user.id):
-        return
-    await callback.message.answer("Istatistikler - Periyot secin:", reply_markup=kb.stats_keyboard())
-    await callback.answer()
-
-@router.callback_query(F.data.startswith("stats_"))
-async def show_stats(callback: CallbackQuery):
-    if not is_admin(callback.from_user.id):
-        return
-    period = callback.data.split("_")[1]
-    stats = db.get_stats(period)
-    period_text = {"daily": "Gunluk", "weekly": "Haftalik", "monthly": "Aylik"}[period]
-    text = (period_text + " Istatistikler\n\n"
-            + "Toplam Satis: " + str(stats["total_orders"]) + " adet\n"
-            + "Toplam Gelir: $" + str(stats["total_revenue"]) + "\n"
-            + "Toplam Maliyet: $" + str(stats["total_cost"]) + "\n"
-            + "Net Kar: $" + str(stats["net_profit"]))
-    await callback.message.answer(text)
-    await callback.answer()
-
-@router.callback_query(F.data == "admin_all_orders")
-async def admin_all_orders(callback: CallbackQuery):
-    if not is_admin(callback.from_user.id):
-        return
-    orders = db.get_all_orders()
-    if not orders:
-        await callback.message.answer("Hic siparis yok.")
-        await callback.answer()
-        return
-    text = "Tum Siparisler\n\n"
-    for o in orders:
-        period_text = {"daily": "1 day", "weekly": "7 days", "monthly": "30 days"}.get(o[6], "-")
-        text += str(o[1]) + " | " + str(o[3]) + " | " + period_text + " | $" + str(o[5]) + " | " + str(o[7]) + "\n"
-    await callback.message.answer(text)
-    await callback.answer()
 @router.callback_query(F.data == "admin_stats")
 async def admin_stats(callback: CallbackQuery):
     if not is_admin(callback.from_user.id):
