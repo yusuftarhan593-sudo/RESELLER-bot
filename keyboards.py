@@ -19,20 +19,11 @@ def products_keyboard(products, category_id):
     buttons.append([InlineKeyboardButton(text="⬅️ Go back", callback_data="back_main")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def product_detail_keyboard(product_id, period):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="1 day", callback_data="period_" + str(product_id) + "_daily"),
-         InlineKeyboardButton(text="7 day", callback_data="period_" + str(product_id) + "_weekly"),
-         InlineKeyboardButton(text="30 day", callback_data="period_" + str(product_id) + "_monthly")],
-        [InlineKeyboardButton(text="🔑 Buy", callback_data="buy_" + str(product_id) + "_" + str(period))],
-        [InlineKeyboardButton(text="⬅️ Go back", callback_data="back_products_" + str(product_id))]
-    ])
-
 def period_select_keyboard(product_id):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="1 day", callback_data="period_" + str(product_id) + "_daily"),
-         InlineKeyboardButton(text="7 day", callback_data="period_" + str(product_id) + "_weekly"),
-         InlineKeyboardButton(text="30 day", callback_data="period_" + str(product_id) + "_monthly")],
+        [InlineKeyboardButton(text="1 day", callback_data="period_" + str(product_id) + "_daily")],
+        [InlineKeyboardButton(text="7 day", callback_data="period_" + str(product_id) + "_weekly")],
+        [InlineKeyboardButton(text="30 day", callback_data="period_" + str(product_id) + "_monthly")],
         [InlineKeyboardButton(text="⬅️ Go back", callback_data="back_main")]
     ])
 
