@@ -4,7 +4,11 @@ import hashlib
 DB_NAME = "/app/data/bot.db"
 
 def get_conn():
-    return sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(DB_NAME, check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    conn.execute("PRAGMA cache_size=10000")
+    return conn
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -51,13 +55,19 @@ def init_db():
         user_id INTEGER, product_id INTEGER,
         price_daily REAL, price_weekly REAL, price_monthly REAL,
         PRIMARY KEY (user_id, product_id))""")
+
+    # İndexler - sorguları hızlandırır
+    c.execute("CREATE INDEX IF NOT EXISTS idx_users_telegram ON users(telegram_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_stock_product ON stock(product_id, is_sold, period)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id)")
+
     conn.commit()
     conn.close()
 
 def add_user_by_admin(username, password):
     conn = get_conn()
     c = conn.cursor()
-    c.execute("SELECT * FROM users WHERE username=?", (username,))
+    c.execute("SELECT id FROM users WHERE username=?", (username,))
     if c.fetchone():
         conn.close()
         return False
