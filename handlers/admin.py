@@ -6,6 +6,7 @@ from aiogram.fsm.state import State, StatesGroup
 import database as db
 import keyboards as kb
 import os
+import sqlite3
 
 router = Router()
 ADMIN_IDS = [int(os.environ.get("ADMIN_ID", 0))]
@@ -471,7 +472,7 @@ async def user_detail(callback: CallbackQuery):
     if not user:
         await callback.answer("Kullanici bulunamadi!", show_alert=True)
         return
-    text = "Kullanici Detayi\n\nID: " + str(user[0]) + "\nKullanici adi: " + str(user[1]) + "\nBakiye: " + str(user[3]) + "$\nKayit: " + str(user[7])
+    text = "Kullanici Detayi\n\nID: " + str(user[0]) + "\nKullanici adi: " + str(user[1]) + "\nBakiye: " + str(round(user[3], 2)) + "$\nKayit: " + str(user[7])
     await callback.message.answer(text, reply_markup=kb.user_detail_keyboard(user_id))
     await callback.answer()
 
@@ -586,6 +587,15 @@ async def admin_stats(callback: CallbackQuery):
 @router.callback_query(F.data.startswith("stats_"))
 async def show_stats(callback: CallbackQuery):
     if not is_admin(callback.from_user.id):
+        return
+    if callback.data == "stats_reset":
+        conn = sqlite3.connect("/app/data/bot.db")
+        c = conn.cursor()
+        c.execute("DELETE FROM orders")
+        conn.commit()
+        conn.close()
+        await callback.message.answer("Istatistikler sifirlandi!")
+        await callback.answer()
         return
     period = callback.data.split("_")[1]
     stats = db.get_stats(period)
