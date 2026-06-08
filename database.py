@@ -344,7 +344,7 @@ def get_stats(period):
         "total_revenue": total_revenue,
         "total_cost": total_cost,
         "net_profit": net_profit
-    }def get_order_by_key_and_user(key_code, user_id):
+    def get_order_by_key_and_user(key_code, user_id):
     conn = get_conn()
     c = conn.cursor()
     c.execute("SELECT * FROM orders WHERE key_code=? AND user_id=?", (key_code, user_id))
