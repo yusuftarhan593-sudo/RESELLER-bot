@@ -30,9 +30,10 @@ def period_select_keyboard(product_id, price_daily, price_weekly, price_monthly)
         [InlineKeyboardButton(text="⬅️ Go back", callback_data="back_main")]
     ])
 
-def buy_keyboard(product_id, period):
+def buy_options_keyboard(product_id, period):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔑 Buy", callback_data="buyone_" + str(product_id) + "_" + str(period))],
+        [InlineKeyboardButton(text="Buy one", callback_data="buyone_" + str(product_id) + "_" + str(period)),
+         InlineKeyboardButton(text="Buy multiple", callback_data="buymulti_" + str(product_id) + "_" + str(period))],
         [InlineKeyboardButton(text="⬅️ Go back", callback_data="product_" + str(product_id))]
     ])
 
