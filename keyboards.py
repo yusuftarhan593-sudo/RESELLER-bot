@@ -3,7 +3,8 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeybo
 def main_menu():
     return ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text="🛍️ Buy keys")],
-        [KeyboardButton(text="🏛️ Account"), KeyboardButton(text="🚀 Log out")]
+        [KeyboardButton(text="🏛️ Account"), KeyboardButton(text="🚀 Log out")],
+        [KeyboardButton(text="🔄 Reset Request")]
     ], resize_keyboard=True)
 
 def categories_keyboard(categories):
@@ -45,6 +46,12 @@ def balance_menu_keyboard(user_id):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📋 Purchase History", callback_data="order_history_" + str(user_id))],
         [InlineKeyboardButton(text="💳 Top-up History", callback_data="topup_history_" + str(user_id))]
+    ])
+
+def reset_request_keyboard(user_id, username):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Onayla", callback_data="reset_approve_" + str(user_id)),
+         InlineKeyboardButton(text="❌ Reddet", callback_data="reset_reject_" + str(user_id))]
     ])
 
 def admin_inline_menu():
