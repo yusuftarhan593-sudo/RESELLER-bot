@@ -7,6 +7,7 @@ import database as db
 import keyboards as kb
 import sqlite3
 import os
+from datetime import datetime
 
 router = Router()
 ADMIN_ID = int(os.environ.get("ADMIN_ID", 0))
@@ -79,33 +80,39 @@ async def reset_request(message: Message, state: FSMContext):
 @router.message(ResetRequest.key)
 async def reset_request_key(message: Message, state: FSMContext):
     user = db.get_user_by_telegram(message.from_user.id)
-    key = message.text
+    key = message.text.strip()
+    order = db.get_order_by_key_and_user(key, user[0])
+    if not order:
+        await message.answer("❌ This key does not belong to you or was not purchased from this bot!")
+        await state.clear()
+        return
     await state.clear()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    period_text = {"daily": "1 day", "weekly": "7 days", "monthly": "30 days"}.get(order[6], order[6])
     await message.answer("✅ Your reset request has been sent. Please wait for admin approval.")
-    from aiogram import Bot
-    bot = message.bot
-    await bot.send_message(
+    await message.bot.send_message(
         ADMIN_ID,
-        "🔄 Reset Request\n\n👤 User: " + str(user[1]) + "\n🔑 Key: " + str(key),
+        "🔄 Key Reset Request\n\n"
+        "👤 User: " + str(user[1]) + "\n"
+        "📦 Product: " + str(order[3]) + "\n"
+        "🔑 Key: " + str(key) + "\n"
+        "⏱ Period: " + period_text + "\n"
+        "📅 Date: " + now,
         reply_markup=kb.reset_request_keyboard(message.from_user.id, user[1])
     )
 
 @router.callback_query(F.data.startswith("reset_approve_"))
 async def reset_approve(callback: CallbackQuery):
     user_telegram_id = int(callback.data.split("_")[2])
-    from aiogram import Bot
-    bot = callback.bot
-    await bot.send_message(user_telegram_id, "✅ Your reset request has been approved!")
-    await callback.message.edit_text(callback.message.text + "\n\n✅ Onaylandı")
+    await callback.bot.send_message(user_telegram_id, "✅ Your reset request has been approved!")
+    await callback.message.edit_text(callback.message.text + "\n\n✅ Approved")
     await callback.answer()
 
 @router.callback_query(F.data.startswith("reset_reject_"))
 async def reset_reject(callback: CallbackQuery):
     user_telegram_id = int(callback.data.split("_")[2])
-    from aiogram import Bot
-    bot = callback.bot
-    await bot.send_message(user_telegram_id, "❌ Your reset request has been rejected!")
-    await callback.message.edit_text(callback.message.text + "\n\n❌ Reddedildi")
+    await callback.bot.send_message(user_telegram_id, "❌ Your reset request has been rejected!")
+    await callback.message.edit_text(callback.message.text + "\n\n❌ Rejected")
     await callback.answer()
 
 @router.callback_query(F.data == "back_main")
