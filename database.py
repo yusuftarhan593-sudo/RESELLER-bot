@@ -55,12 +55,9 @@ def init_db():
         user_id INTEGER, product_id INTEGER,
         price_daily REAL, price_weekly REAL, price_monthly REAL,
         PRIMARY KEY (user_id, product_id))""")
-
-    # İndexler - sorguları hızlandırır
     c.execute("CREATE INDEX IF NOT EXISTS idx_users_telegram ON users(telegram_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_stock_product ON stock(product_id, is_sold, period)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id)")
-
     conn.commit()
     conn.close()
 
@@ -344,11 +341,12 @@ def get_stats(period):
         "total_revenue": total_revenue,
         "total_cost": total_cost,
         "net_profit": net_profit
-    def get_order_by_key_and_user(key_code, user_id):
+    }
+
+def get_order_by_key_and_user(key_code, user_id):
     conn = get_conn()
     c = conn.cursor()
     c.execute("SELECT * FROM orders WHERE key_code=? AND user_id=?", (key_code, user_id))
     order = c.fetchone()
     conn.close()
     return order
-
