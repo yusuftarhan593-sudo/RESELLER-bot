@@ -16,6 +16,11 @@ class LoginState(StatesGroup):
     username = State()
     password = State()
 
+class BuyMultiple(StatesGroup):
+    product_id = State()
+    period = State()
+    amount = State()
+
 class ResetRequest(StatesGroup):
     key = State()
 
@@ -194,9 +199,9 @@ async def show_period_detail(callback: CallbackQuery):
         "📦 Stock: " + str(stock) + " keys"
     )
     try:
-        await callback.message.edit_text(text, reply_markup=kb.buy_keyboard(product_id, period))
+        await callback.message.edit_text(text, reply_markup=kb.buy_options_keyboard(product_id, period))
     except:
-        await callback.message.answer(text, reply_markup=kb.buy_keyboard(product_id, period))
+        await callback.message.answer(text, reply_markup=kb.buy_options_keyboard(product_id, period))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("buyone_"))
@@ -227,6 +232,53 @@ async def buy_one(callback: CallbackQuery):
     except:
         await callback.message.answer(text, reply_markup=kb.confirm_buy_keyboard(product_id, period, 1))
     await callback.answer()
+
+@router.callback_query(F.data.startswith("buymulti_"))
+async def buy_multiple_ask(callback: CallbackQuery, state: FSMContext):
+    parts = callback.data.split("_")
+    product_id = int(parts[1])
+    period = parts[2]
+    await state.update_data(product_id=product_id, period=period)
+    await callback.message.answer("How many keys do you want to buy?")
+    await state.set_state(BuyMultiple.amount)
+    await callback.answer()
+
+@router.message(BuyMultiple.amount)
+async def buy_multiple_confirm(message: Message, state: FSMContext):
+    try:
+        amount = int(message.text)
+    except:
+        await message.answer("Please enter a valid number!")
+        return
+    data = await state.get_data()
+    product_id = data["product_id"]
+    period = data["period"]
+    product = db.get_product(product_id)
+    user = db.get_user_by_telegram(message.from_user.id)
+    custom = db.get_custom_prices(user[0], product_id) if user else None
+    if period == "daily":
+        price = custom[0] if custom else product[4]
+        period_text = "1 day"
+    elif period == "weekly":
+        price = custom[1] if custom else product[5]
+        period_text = "7 days"
+    else:
+        price = custom[2] if custom else product[6]
+        period_text = "30 days"
+    total = round(price * amount, 2)
+    stock = db.get_stock_count(product_id, period)
+    if amount > stock:
+        await message.answer("❌ Not enough stock! Available: " + str(stock))
+        await state.clear()
+        return
+    await message.answer(
+        "🛒 Confirm Purchase\n\n"
+        "🔑 " + str(product[2]) + " x" + str(amount) + "\n"
+        "⏱ " + period_text + "\n"
+        "💰 Total: $" + str(total),
+        reply_markup=kb.confirm_buy_keyboard(product_id, period, amount)
+    )
+    await state.clear()
 
 @router.callback_query(F.data.startswith("confirm_"))
 async def do_buy(callback: CallbackQuery):
