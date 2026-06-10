@@ -142,7 +142,7 @@ def cancel_keyboard():
 
 def stock_period_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📅 1 Day Stock", callback_data="stock_period_daily")],
-        [InlineKeyboardButton(text="📅 7 Day Stock", callback_data="stock_period_weekly")],
-        [InlineKeyboardButton(text="📅 30 Day Stock", callback_data="stock_period_monthly")]
+        [InlineKeyboardButton(text="📅 1 Day Stock", callback_data="addstock_daily")],
+        [InlineKeyboardButton(text="📅 7 Day Stock", callback_data="addstock_weekly")],
+        [InlineKeyboardButton(text="📅 30 Day Stock", callback_data="addstock_monthly")]
     ])
