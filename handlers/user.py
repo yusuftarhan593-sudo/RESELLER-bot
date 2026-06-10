@@ -175,7 +175,7 @@ async def get_files(callback: CallbackQuery):
 async def check_status(callback: CallbackQuery):
     await callback.answer("Status check coming soon!", show_alert=True)
 
-@router.callback_query(F.data.startswith("period_"))
+@router.callback_query(F.data.startswith("period_") & ~F.data.startswith("stock_period_"))
 async def show_period_detail(callback: CallbackQuery):
     parts = callback.data.split("_")
     product_id = int(parts[1])
