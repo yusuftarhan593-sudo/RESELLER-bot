@@ -201,31 +201,31 @@ async def edit_price_daily(message: Message, state: FSMContext):
         await state.clear()
         await message.answer("Iptal edildi.")
         return
-    await state.update_data(price_daily=message.text.replace(",", "."))
+    await state.update_data(price_daily=message.text.replace(",", ".").replace("$", ""))
     await message.answer("Yeni haftalik satis fiyati girin:")
     await state.set_state(EditProduct.price_weekly)
 
 @router.message(EditProduct.price_weekly)
 async def edit_price_weekly(message: Message, state: FSMContext):
-    await state.update_data(price_weekly=message.text.replace(",", "."))
+    await state.update_data(price_weekly=message.text.replace(",", ".").replace("$", ""))
     await message.answer("Yeni aylik satis fiyati girin:")
     await state.set_state(EditProduct.price_monthly)
 
 @router.message(EditProduct.price_monthly)
 async def edit_price_monthly(message: Message, state: FSMContext):
-    await state.update_data(price_monthly=message.text.replace(",", "."))
+    await state.update_data(price_monthly=message.text.replace(",", ".").replace("$", ""))
     await message.answer("Yeni gunluk MALIYET girin:")
     await state.set_state(EditProduct.cost_daily)
 
 @router.message(EditProduct.cost_daily)
 async def edit_cost_daily(message: Message, state: FSMContext):
-    await state.update_data(cost_daily=message.text.replace(",", "."))
+    await state.update_data(cost_daily=message.text.replace(",", ".").replace("$", ""))
     await message.answer("Yeni haftalik MALIYET girin:")
     await state.set_state(EditProduct.cost_weekly)
 
 @router.message(EditProduct.cost_weekly)
 async def edit_cost_weekly(message: Message, state: FSMContext):
-    await state.update_data(cost_weekly=message.text.replace(",", "."))
+    await state.update_data(cost_weekly=message.text.replace(",", ".").replace("$", ""))
     await message.answer("Yeni aylik MALIYET girin:")
     await state.set_state(EditProduct.cost_monthly)
 
@@ -236,7 +236,7 @@ async def edit_cost_monthly(message: Message, state: FSMContext):
         db.update_product_prices(
             data["product_id"],
             float(data["price_daily"]), float(data["price_weekly"]), float(data["price_monthly"]),
-            float(data["cost_daily"]), float(data["cost_weekly"]), float(message.text.replace(",", "."))
+            float(data["cost_daily"]), float(data["cost_weekly"]), float(message.text.replace(",", ".").replace("$", ""))
         )
         await message.answer("Urun guncellendi!")
     except Exception as e:
@@ -283,31 +283,31 @@ async def add_product_desc(message: Message, state: FSMContext):
 
 @router.message(AddProduct.price_daily)
 async def add_product_price_daily(message: Message, state: FSMContext):
-    await state.update_data(price_daily=message.text.replace(",", "."))
+    await state.update_data(price_daily=message.text.replace(",", ".").replace("$", ""))
     await message.answer("Haftalik satis fiyati girin:")
     await state.set_state(AddProduct.price_weekly)
 
 @router.message(AddProduct.price_weekly)
 async def add_product_price_weekly(message: Message, state: FSMContext):
-    await state.update_data(price_weekly=message.text.replace(",", "."))
+    await state.update_data(price_weekly=message.text.replace(",", ".").replace("$", ""))
     await message.answer("Aylik satis fiyati girin:")
     await state.set_state(AddProduct.price_monthly)
 
 @router.message(AddProduct.price_monthly)
 async def add_product_price_monthly(message: Message, state: FSMContext):
-    await state.update_data(price_monthly=message.text.replace(",", "."))
+    await state.update_data(price_monthly=message.text.replace(",", ".").replace("$", ""))
     await message.answer("Gunluk MALIYET girin:")
     await state.set_state(AddProduct.cost_daily)
 
 @router.message(AddProduct.cost_daily)
 async def add_product_cost_daily(message: Message, state: FSMContext):
-    await state.update_data(cost_daily=message.text.replace(",", "."))
+    await state.update_data(cost_daily=message.text.replace(",", ".").replace("$", ""))
     await message.answer("Haftalik MALIYET girin:")
     await state.set_state(AddProduct.cost_weekly)
 
 @router.message(AddProduct.cost_weekly)
 async def add_product_cost_weekly(message: Message, state: FSMContext):
-    await state.update_data(cost_weekly=message.text.replace(",", "."))
+    await state.update_data(cost_weekly=message.text.replace(",", ".").replace("$", ""))
     await message.answer("Aylik MALIYET girin:")
     await state.set_state(AddProduct.cost_monthly)
 
@@ -318,7 +318,7 @@ async def add_product_cost_monthly(message: Message, state: FSMContext):
         db.add_product(
             int(data["category_id"]), data["name"], data["description"],
             float(data["price_daily"]), float(data["price_weekly"]), float(data["price_monthly"]),
-            float(data["cost_daily"]), float(data["cost_weekly"]), float(message.text.replace(",", "."))
+            float(data["cost_daily"]), float(data["cost_weekly"]), float(message.text.replace(",", ".").replace("$", ""))
         )
         await message.answer("Urun eklendi: " + data["name"])
     except Exception as e:
@@ -351,9 +351,9 @@ async def add_stock_product(message: Message, state: FSMContext):
     await message.answer("Hangi periyot icin stok ekleyeceksiniz?", reply_markup=kb.stock_period_keyboard())
     await state.set_state(AddStock.period)
 
-@router.callback_query(F.data.startswith("stock_period_"))
+@router.callback_query(F.data.startswith("addstock_"))
 async def stock_period_select(callback: CallbackQuery, state: FSMContext):
-    period = callback.data.replace("stock_period_", "")
+    period = callback.data.replace("addstock_", "")
     await state.update_data(period=period)
     period_text = {"daily": "1 Gun", "weekly": "7 Gun", "monthly": "30 Gun"}[period]
     await callback.message.answer("Periyot: " + period_text + "\n\nKey/kodlari girin (her satira bir tane):")
