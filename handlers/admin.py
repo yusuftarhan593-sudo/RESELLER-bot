@@ -82,13 +82,20 @@ async def admin_panel(message: Message):
 async def back_admin(callback: CallbackQuery):
     if not is_admin(callback.from_user.id):
         return
-    await callback.message.answer("Admin Paneli\nNe yapmak istersiniz?", reply_markup=kb.admin_inline_menu())
+    try:
+        await callback.message.edit_text("Admin Paneli\nNe yapmak istersiniz?", reply_markup=kb.admin_inline_menu())
+    except:
+        await callback.message.answer("Admin Paneli\nNe yapmak istersiniz?", reply_markup=kb.admin_inline_menu())
     await callback.answer()
 
 @router.callback_query(F.data == "admin_add_category")
 async def cb_add_category(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
         return
+    try:
+        await callback.message.edit_text("Kategori adini girin:")
+    except:
+        await callback.message.answer("Kategori adini girin:")
     await callback.message.answer("Kategori adini girin:", reply_markup=kb.cancel_keyboard())
     await state.set_state(AddCategory.name)
     await callback.answer()
@@ -117,10 +124,12 @@ async def manage_categories(callback: CallbackQuery):
         return
     categories = db.get_categories()
     if not categories:
-        await callback.message.answer("Hic kategori yok.")
-        await callback.answer()
+        await callback.answer("Hic kategori yok.", show_alert=True)
         return
-    await callback.message.answer("Kategoriler:", reply_markup=kb.categories_manage_keyboard(categories))
+    try:
+        await callback.message.edit_text("Kategoriler:", reply_markup=kb.categories_manage_keyboard(categories))
+    except:
+        await callback.message.answer("Kategoriler:", reply_markup=kb.categories_manage_keyboard(categories))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("delete_cat_"))
@@ -129,8 +138,7 @@ async def delete_category(callback: CallbackQuery):
         return
     cat_id = int(callback.data.split("_")[2])
     db.delete_category(cat_id)
-    await callback.message.answer("Kategori silindi!")
-    await callback.answer()
+    await callback.answer("Kategori silindi!", show_alert=True)
 
 @router.callback_query(F.data.startswith("edit_cat_"))
 async def edit_category_start(callback: CallbackQuery, state: FSMContext):
@@ -138,7 +146,10 @@ async def edit_category_start(callback: CallbackQuery, state: FSMContext):
         return
     cat_id = int(callback.data.split("_")[2])
     await state.update_data(category_id=cat_id)
-    await callback.message.answer("Yeni kategori adini girin:", reply_markup=kb.cancel_keyboard())
+    try:
+        await callback.message.edit_text("Yeni kategori adini girin:")
+    except:
+        await callback.message.answer("Yeni kategori adini girin:", reply_markup=kb.cancel_keyboard())
     await state.set_state(EditCategory.name)
     await callback.answer()
 
@@ -166,10 +177,12 @@ async def manage_products(callback: CallbackQuery):
         return
     products = db.get_products()
     if not products:
-        await callback.message.answer("Hic urun yok.")
-        await callback.answer()
+        await callback.answer("Hic urun yok.", show_alert=True)
         return
-    await callback.message.answer("Urunler:", reply_markup=kb.products_manage_keyboard(products))
+    try:
+        await callback.message.edit_text("Urunler:", reply_markup=kb.products_manage_keyboard(products))
+    except:
+        await callback.message.answer("Urunler:", reply_markup=kb.products_manage_keyboard(products))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("delete_product_"))
@@ -178,8 +191,7 @@ async def delete_product(callback: CallbackQuery):
         return
     product_id = int(callback.data.split("_")[2])
     db.delete_product(product_id)
-    await callback.message.answer("Urun silindi!")
-    await callback.answer()
+    await callback.answer("Urun silindi!", show_alert=True)
 
 @router.callback_query(F.data.startswith("edit_product_"))
 async def edit_product_start(callback: CallbackQuery, state: FSMContext):
@@ -188,10 +200,18 @@ async def edit_product_start(callback: CallbackQuery, state: FSMContext):
     product_id = int(callback.data.split("_")[2])
     product = db.get_product(product_id)
     await state.update_data(product_id=product_id)
-    await callback.message.answer(
-        "Urun: " + str(product[2]) + "\nMevcut:\n- Gunluk: " + str(product[4]) + "$\n- Haftalik: " + str(product[5]) + "$\n- Aylik: " + str(product[6]) + "$\n\nYeni gunluk satis fiyati girin:",
-        reply_markup=kb.cancel_keyboard()
+    text = (
+        "Urun: " + str(product[2]) + "\n"
+        "Mevcut:\n"
+        "- Gunluk: " + str(product[4]) + "$\n"
+        "- Haftalik: " + str(product[5]) + "$\n"
+        "- Aylik: " + str(product[6]) + "$\n\n"
+        "Yeni gunluk satis fiyati girin:"
     )
+    try:
+        await callback.message.edit_text(text)
+    except:
+        await callback.message.answer(text, reply_markup=kb.cancel_keyboard())
     await state.set_state(EditProduct.price_daily)
     await callback.answer()
 
@@ -249,13 +269,15 @@ async def cb_add_product(callback: CallbackQuery, state: FSMContext):
         return
     categories = db.get_categories()
     if not categories:
-        await callback.message.answer("Once kategori ekleyin!")
-        await callback.answer()
+        await callback.answer("Once kategori ekleyin!", show_alert=True)
         return
     text = "Kategori ID secin:\n\n"
     for cat in categories:
         text += str(cat[0]) + " - " + str(cat[2]) + " " + str(cat[1]) + "\n"
-    await callback.message.answer(text, reply_markup=kb.cancel_keyboard())
+    try:
+        await callback.message.edit_text(text)
+    except:
+        await callback.message.answer(text, reply_markup=kb.cancel_keyboard())
     await state.set_state(AddProduct.category_id)
     await callback.answer()
 
@@ -331,13 +353,15 @@ async def cb_add_stock(callback: CallbackQuery, state: FSMContext):
         return
     products = db.get_products()
     if not products:
-        await callback.message.answer("Once urun ekleyin!")
-        await callback.answer()
+        await callback.answer("Once urun ekleyin!", show_alert=True)
         return
     text = "Urun ID secin:\n\n"
     for p in products:
         text += str(p[0]) + " - " + str(p[2]) + "\n"
-    await callback.message.answer(text, reply_markup=kb.cancel_keyboard())
+    try:
+        await callback.message.edit_text(text)
+    except:
+        await callback.message.answer(text, reply_markup=kb.cancel_keyboard())
     await state.set_state(AddStock.product_id)
     await callback.answer()
 
@@ -356,18 +380,30 @@ async def stock_period_select(callback: CallbackQuery, state: FSMContext):
     period = callback.data.replace("addstock_", "")
     await state.update_data(period=period)
     period_text = {"daily": "1 Gun", "weekly": "7 Gun", "monthly": "30 Gun"}[period]
-    await callback.message.answer("Periyot: " + period_text + "\n\nKey/kodlari girin (her satira bir tane):")
+    try:
+        await callback.message.edit_text(
+            "Periyot: " + period_text + "\n\nKey/kodlari girin (her satira bir tane):\n(Bitmek icin Cancel yazin)"
+        )
+    except:
+        await callback.message.answer("Periyot: " + period_text + "\n\nKey/kodlari girin (her satira bir tane):\n(Bitmek icin Cancel yazin)")
     await state.set_state(AddStock.keys)
     await callback.answer()
 
 @router.message(AddStock.keys)
 async def add_stock_keys(message: Message, state: FSMContext):
+    if message.text == "Cancel":
+        await state.clear()
+        await message.answer("Iptal edildi.")
+        return
     data = await state.get_data()
     keys = message.text.strip().split("\n")
     for key in keys:
         db.add_stock_with_period(int(data["product_id"]), key.strip(), data["period"])
-    await message.answer(str(len(keys)) + " adet stok eklendi! Periyot: " + data["period"])
-    await state.clear()
+    await message.answer(
+        str(len(keys)) + " adet stok eklendi! Periyot: " + data["period"] + "\n\nBaska periyot icin secin veya Cancel yazin:",
+        reply_markup=kb.stock_period_keyboard()
+    )
+    await state.set_state(AddStock.period)
 
 @router.callback_query(F.data == "admin_add_balance")
 async def cb_add_balance(callback: CallbackQuery, state: FSMContext):
@@ -375,10 +411,12 @@ async def cb_add_balance(callback: CallbackQuery, state: FSMContext):
         return
     users = db.get_all_users()
     if not users:
-        await callback.message.answer("Hic kullanici yok.")
-        await callback.answer()
+        await callback.answer("Hic kullanici yok.", show_alert=True)
         return
-    await callback.message.answer("Bakiye eklenecek kullaniciy secin:", reply_markup=kb.users_list_keyboard(users, "bal"))
+    try:
+        await callback.message.edit_text("Bakiye eklenecek kullaniciy secin:", reply_markup=kb.users_list_keyboard(users, "bal"))
+    except:
+        await callback.message.answer("Bakiye eklenecek kullaniciy secin:", reply_markup=kb.users_list_keyboard(users, "bal"))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("bal_select_"))
@@ -387,7 +425,10 @@ async def bal_select(callback: CallbackQuery, state: FSMContext):
         return
     user_id = int(callback.data.split("_")[2])
     await state.update_data(user_id=user_id)
-    await callback.message.answer("Miktar girin (ornek: 50):", reply_markup=kb.cancel_keyboard())
+    try:
+        await callback.message.edit_text("Miktar girin (ornek: 50):")
+    except:
+        await callback.message.answer("Miktar girin (ornek: 50):", reply_markup=kb.cancel_keyboard())
     await state.set_state(AddBalance.amount)
     await callback.answer()
 
@@ -408,7 +449,10 @@ async def bal_remove(callback: CallbackQuery, state: FSMContext):
         return
     user_id = int(callback.data.split("_")[2])
     await state.update_data(user_id=user_id)
-    await callback.message.answer("Dusurulecek miktari girin:", reply_markup=kb.cancel_keyboard())
+    try:
+        await callback.message.edit_text("Dusurulecek miktari girin:")
+    except:
+        await callback.message.answer("Dusurulecek miktari girin:", reply_markup=kb.cancel_keyboard())
     await state.set_state(RemoveBalance.amount)
     await callback.answer()
 
@@ -427,7 +471,10 @@ async def remove_balance_amount(message: Message, state: FSMContext):
 async def cb_add_user(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
         return
-    await callback.message.answer("Yeni kullanici adini girin:", reply_markup=kb.cancel_keyboard())
+    try:
+        await callback.message.edit_text("Yeni kullanici adini girin:")
+    except:
+        await callback.message.answer("Yeni kullanici adini girin:", reply_markup=kb.cancel_keyboard())
     await state.set_state(AddUser.username)
     await callback.answer()
 
@@ -457,10 +504,12 @@ async def cb_search_user(callback: CallbackQuery):
         return
     users = db.get_all_users()
     if not users:
-        await callback.message.answer("Hic kullanici yok.")
-        await callback.answer()
+        await callback.answer("Hic kullanici yok.", show_alert=True)
         return
-    await callback.message.answer("Tum Kullanicilar:", reply_markup=kb.users_list_keyboard(users, "detail"))
+    try:
+        await callback.message.edit_text("Tum Kullanicilar:", reply_markup=kb.users_list_keyboard(users, "detail"))
+    except:
+        await callback.message.answer("Tum Kullanicilar:", reply_markup=kb.users_list_keyboard(users, "detail"))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("admin_user_"))
@@ -472,8 +521,17 @@ async def user_detail(callback: CallbackQuery):
     if not user:
         await callback.answer("Kullanici bulunamadi!", show_alert=True)
         return
-    text = "Kullanici Detayi\n\nID: " + str(user[0]) + "\nKullanici adi: " + str(user[1]) + "\nBakiye: " + str(round(user[3], 2)) + "$\nKayit: " + str(user[7])
-    await callback.message.answer(text, reply_markup=kb.user_detail_keyboard(user_id))
+    text = (
+        "Kullanici Detayi\n\n"
+        "ID: " + str(user[0]) + "\n"
+        "Kullanici adi: " + str(user[1]) + "\n"
+        "Bakiye: " + str(round(user[3], 2)) + "$\n"
+        "Kayit: " + str(user[7])
+    )
+    try:
+        await callback.message.edit_text(text, reply_markup=kb.user_detail_keyboard(user_id))
+    except:
+        await callback.message.answer(text, reply_markup=kb.user_detail_keyboard(user_id))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("delete_user_"))
@@ -482,8 +540,7 @@ async def delete_user(callback: CallbackQuery):
         return
     user_id = int(callback.data.split("_")[2])
     db.delete_user(user_id)
-    await callback.message.answer("Kullanici silindi!")
-    await callback.answer()
+    await callback.answer("Kullanici silindi!", show_alert=True)
 
 @router.callback_query(F.data.startswith("change_pass_"))
 async def change_pass(callback: CallbackQuery, state: FSMContext):
@@ -491,7 +548,10 @@ async def change_pass(callback: CallbackQuery, state: FSMContext):
         return
     user_id = int(callback.data.split("_")[2])
     await state.update_data(user_id=user_id)
-    await callback.message.answer("Yeni sifre girin:", reply_markup=kb.cancel_keyboard())
+    try:
+        await callback.message.edit_text("Yeni sifre girin:")
+    except:
+        await callback.message.answer("Yeni sifre girin:", reply_markup=kb.cancel_keyboard())
     await state.set_state(ChangePassword.password)
     await callback.answer()
 
@@ -511,14 +571,16 @@ async def order_history(callback: CallbackQuery):
     user_id = int(callback.data.split("_")[2])
     orders = db.get_user_orders(user_id)
     if not orders:
-        await callback.message.answer("Satin alim gecmisi yok.")
-        await callback.answer()
+        await callback.answer("Satin alim gecmisi yok.", show_alert=True)
         return
     text = "Satin Alim Gecmisi\n\n"
     for o in orders:
         period_text = {"daily": "1 day", "weekly": "7 days", "monthly": "30 days"}.get(o[6], "-")
         text += str(o[3]) + " | " + period_text + " | $" + str(o[5]) + " | " + str(o[7]) + "\n"
-    await callback.message.answer(text)
+    try:
+        await callback.message.edit_text(text)
+    except:
+        await callback.message.answer(text)
     await callback.answer()
 
 @router.callback_query(F.data.startswith("custom_price_"))
@@ -528,10 +590,12 @@ async def custom_price_select(callback: CallbackQuery):
     user_id = int(callback.data.split("_")[2])
     products = db.get_products()
     if not products:
-        await callback.message.answer("Hic urun yok!")
-        await callback.answer()
+        await callback.answer("Hic urun yok!", show_alert=True)
         return
-    await callback.message.answer("Urun secin:", reply_markup=kb.custom_price_products_keyboard(products, user_id))
+    try:
+        await callback.message.edit_text("Urun secin:", reply_markup=kb.custom_price_products_keyboard(products, user_id))
+    except:
+        await callback.message.answer("Urun secin:", reply_markup=kb.custom_price_products_keyboard(products, user_id))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("set_custom_"))
@@ -542,7 +606,10 @@ async def set_custom_price(callback: CallbackQuery, state: FSMContext):
     user_id = int(parts[2])
     product_id = int(parts[3])
     await state.update_data(user_id=user_id, product_id=product_id)
-    await callback.message.answer("Gunluk ozel fiyat girin:", reply_markup=kb.cancel_keyboard())
+    try:
+        await callback.message.edit_text("Gunluk ozel fiyat girin:")
+    except:
+        await callback.message.answer("Gunluk ozel fiyat girin:", reply_markup=kb.cancel_keyboard())
     await state.set_state(CustomPrice.price_daily)
     await callback.answer()
 
@@ -581,7 +648,10 @@ async def save_custom_price_monthly(message: Message, state: FSMContext):
 async def admin_stats(callback: CallbackQuery):
     if not is_admin(callback.from_user.id):
         return
-    await callback.message.answer("Istatistikler - Periyot secin:", reply_markup=kb.stats_keyboard())
+    try:
+        await callback.message.edit_text("Istatistikler - Periyot secin:", reply_markup=kb.stats_keyboard())
+    except:
+        await callback.message.answer("Istatistikler - Periyot secin:", reply_markup=kb.stats_keyboard())
     await callback.answer()
 
 @router.callback_query(F.data.startswith("stats_"))
@@ -594,18 +664,22 @@ async def show_stats(callback: CallbackQuery):
         c.execute("DELETE FROM orders")
         conn.commit()
         conn.close()
-        await callback.message.answer("Istatistikler sifirlandi!")
-        await callback.answer()
+        await callback.answer("Istatistikler sifirlandi!", show_alert=True)
         return
     period = callback.data.split("_")[1]
     stats = db.get_stats(period)
     period_text = {"daily": "Gunluk", "weekly": "Haftalik", "monthly": "Aylik"}[period]
-    text = (period_text + " Istatistikler\n\n"
-            + "Toplam Satis: " + str(stats["total_orders"]) + " adet\n"
-            + "Toplam Gelir: $" + str(stats["total_revenue"]) + "\n"
-            + "Toplam Maliyet: $" + str(stats["total_cost"]) + "\n"
-            + "Net Kar: $" + str(stats["net_profit"]))
-    await callback.message.answer(text)
+    text = (
+        period_text + " Istatistikler\n\n"
+        "Toplam Satis: " + str(stats["total_orders"]) + " adet\n"
+        "Toplam Gelir: $" + str(stats["total_revenue"]) + "\n"
+        "Toplam Maliyet: $" + str(stats["total_cost"]) + "\n"
+        "Net Kar: $" + str(stats["net_profit"])
+    )
+    try:
+        await callback.message.edit_text(text, reply_markup=kb.stats_keyboard())
+    except:
+        await callback.message.answer(text, reply_markup=kb.stats_keyboard())
     await callback.answer()
 
 @router.callback_query(F.data == "admin_all_orders")
@@ -614,12 +688,14 @@ async def admin_all_orders(callback: CallbackQuery):
         return
     orders = db.get_all_orders()
     if not orders:
-        await callback.message.answer("Hic siparis yok.")
-        await callback.answer()
+        await callback.answer("Hic siparis yok.", show_alert=True)
         return
     text = "Tum Siparisler\n\n"
     for o in orders:
         period_text = {"daily": "1 day", "weekly": "7 days", "monthly": "30 days"}.get(o[6], "-")
         text += str(o[1]) + " | " + str(o[3]) + " | " + period_text + " | $" + str(o[5]) + " | " + str(o[7]) + "\n"
-    await callback.message.answer(text)
+    try:
+        await callback.message.edit_text(text)
+    except:
+        await callback.message.answer(text)
     await callback.answer()
