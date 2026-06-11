@@ -69,6 +69,20 @@ def admin_inline_menu():
          InlineKeyboardButton(text="📦 Urun Yonet", callback_data="admin_manage_products")]
     ])
 
+def admin_products_keyboard(products, action):
+    buttons = []
+    for p in products:
+        buttons.append([InlineKeyboardButton(text=str(p[2]), callback_data=action + "_" + str(p[0]))])
+    buttons.append([InlineKeyboardButton(text="🔙 Geri", callback_data="back_admin")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def admin_categories_select_keyboard(categories, action):
+    buttons = []
+    for cat in categories:
+        buttons.append([InlineKeyboardButton(text=str(cat[2]) + " " + str(cat[1]), callback_data=action + "_" + str(cat[0]))])
+    buttons.append([InlineKeyboardButton(text="🔙 Geri", callback_data="back_admin")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
 def user_detail_keyboard(user_id):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💵 Bakiye Ekle", callback_data="bal_select_" + str(user_id)),
@@ -93,6 +107,7 @@ def users_list_keyboard(users, prefix="detail"):
             text="👤 " + str(u[1]) + " | 💰 " + str(u[3]) + "$",
             callback_data=cb
         )])
+    buttons.append([InlineKeyboardButton(text="🔙 Geri", callback_data="back_admin")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def categories_manage_keyboard(categories):
@@ -144,5 +159,6 @@ def stock_period_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📅 1 Day Stock", callback_data="addstock_daily")],
         [InlineKeyboardButton(text="📅 7 Day Stock", callback_data="addstock_weekly")],
-        [InlineKeyboardButton(text="📅 30 Day Stock", callback_data="addstock_monthly")]
+        [InlineKeyboardButton(text="📅 30 Day Stock", callback_data="addstock_monthly")],
+        [InlineKeyboardButton(text="🔙 Geri", callback_data="back_admin")]
     ])
