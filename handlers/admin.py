@@ -79,9 +79,10 @@ async def admin_panel(message: Message):
     await message.answer("Admin Paneli\nNe yapmak istersiniz?", reply_markup=kb.admin_inline_menu())
 
 @router.callback_query(F.data == "back_admin")
-async def back_admin(callback: CallbackQuery):
+async def back_admin(callback: CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
         return
+    await state.clear()
     try:
         await callback.message.edit_text("Admin Paneli\nNe yapmak istersiniz?", reply_markup=kb.admin_inline_menu())
     except:
@@ -95,8 +96,7 @@ async def cb_add_category(callback: CallbackQuery, state: FSMContext):
     try:
         await callback.message.edit_text("Kategori adini girin:")
     except:
-        await callback.message.answer("Kategori adini girin:")
-    await callback.message.answer("Kategori adini girin:", reply_markup=kb.cancel_keyboard())
+        await callback.message.answer("Kategori adini girin:", reply_markup=kb.cancel_keyboard())
     await state.set_state(AddCategory.name)
     await callback.answer()
 
@@ -271,28 +271,31 @@ async def cb_add_product(callback: CallbackQuery, state: FSMContext):
     if not categories:
         await callback.answer("Once kategori ekleyin!", show_alert=True)
         return
-    text = "Kategori ID secin:\n\n"
-    for cat in categories:
-        text += str(cat[0]) + " - " + str(cat[2]) + " " + str(cat[1]) + "\n"
     try:
-        await callback.message.edit_text(text)
+        await callback.message.edit_text("Kategori secin:", reply_markup=kb.admin_categories_select_keyboard(categories, "selectcat"))
     except:
-        await callback.message.answer(text, reply_markup=kb.cancel_keyboard())
-    await state.set_state(AddProduct.category_id)
+        await callback.message.answer("Kategori secin:", reply_markup=kb.admin_categories_select_keyboard(categories, "selectcat"))
     await callback.answer()
 
-@router.message(AddProduct.category_id)
-async def add_product_cat(message: Message, state: FSMContext):
+@router.callback_query(F.data.startswith("selectcat_"))
+async def select_category_for_product(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
+        return
+    cat_id = int(callback.data.split("_")[1])
+    await state.update_data(category_id=str(cat_id))
+    try:
+        await callback.message.edit_text("Urun adini girin:")
+    except:
+        await callback.message.answer("Urun adini girin:", reply_markup=kb.cancel_keyboard())
+    await state.set_state(AddProduct.name)
+    await callback.answer()
+
+@router.message(AddProduct.name)
+async def add_product_name(message: Message, state: FSMContext):
     if message.text == "Cancel":
         await state.clear()
         await message.answer("Iptal edildi.")
         return
-    await state.update_data(category_id=message.text)
-    await message.answer("Urun adini girin:")
-    await state.set_state(AddProduct.name)
-
-@router.message(AddProduct.name)
-async def add_product_name(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
     await message.answer("Aciklama girin:")
     await state.set_state(AddProduct.description)
@@ -355,25 +358,24 @@ async def cb_add_stock(callback: CallbackQuery, state: FSMContext):
     if not products:
         await callback.answer("Once urun ekleyin!", show_alert=True)
         return
-    text = "Urun ID secin:\n\n"
-    for p in products:
-        text += str(p[0]) + " - " + str(p[2]) + "\n"
     try:
-        await callback.message.edit_text(text)
+        await callback.message.edit_text("Stok eklenecek urunu secin:", reply_markup=kb.admin_products_keyboard(products, "selectprod"))
     except:
-        await callback.message.answer(text, reply_markup=kb.cancel_keyboard())
-    await state.set_state(AddStock.product_id)
+        await callback.message.answer("Stok eklenecek urunu secin:", reply_markup=kb.admin_products_keyboard(products, "selectprod"))
     await callback.answer()
 
-@router.message(AddStock.product_id)
-async def add_stock_product(message: Message, state: FSMContext):
-    if message.text == "Cancel":
-        await state.clear()
-        await message.answer("Iptal edildi.")
+@router.callback_query(F.data.startswith("selectprod_"))
+async def select_product_for_stock(callback: CallbackQuery, state: FSMContext):
+    if not is_admin(callback.from_user.id):
         return
-    await state.update_data(product_id=message.text)
-    await message.answer("Hangi periyot icin stok ekleyeceksiniz?", reply_markup=kb.stock_period_keyboard())
+    product_id = int(callback.data.split("_")[1])
+    await state.update_data(product_id=str(product_id))
+    try:
+        await callback.message.edit_text("Hangi periyot icin stok ekleyeceksiniz?", reply_markup=kb.stock_period_keyboard())
+    except:
+        await callback.message.answer("Hangi periyot icin stok ekleyeceksiniz?", reply_markup=kb.stock_period_keyboard())
     await state.set_state(AddStock.period)
+    await callback.answer()
 
 @router.callback_query(F.data.startswith("addstock_"))
 async def stock_period_select(callback: CallbackQuery, state: FSMContext):
